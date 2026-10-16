@@ -6,3 +6,50 @@
 
 /* Aggregate entry point for all special-game styles.
    Keep game-specific rules inside their own files. */
+
+.special-hub-launcher {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, .8fr);
+  gap: 24px;
+  align-items: center;
+  overflow: hidden;
+}
+.special-hub-copy h2 { margin: 4px 0 8px; }
+.special-hub-thumbs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.special-hub-thumbs img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 16px;
+  display: block;
+}
+.special-stage-shell { min-width: 0; }
+.special-stage-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.special-stage-toolbar h2 { margin: 2px 0 0; }
+.special-choice {
+  cursor: pointer;
+  text-align: left;
+  display: grid;
+  gap: 6px;
+}
+.special-choice small { display: block; }
+#special-game-root { min-width: 0; }
+
+@media (max-width: 760px) {
+  .special-hub-launcher { grid-template-columns: 1fr; }
+  .special-stage-toolbar { align-items: flex-start; flex-direction: column; }
+}
+
+.special-stage-shell.is-rice-shop { width:100%; max-width:none; }
+.special-stage-shell.is-rice-shop .special-stage-toolbar { margin-bottom:10px; }
+.special-stage-shell.is-rice-shop #special-game-root { width:100%; }

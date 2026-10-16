@@ -379,6 +379,7 @@ function onHubFilterChange(target) {
 const stageEl = () => document.querySelector("#study-stage");
 
 function stopSpecialGame() {
+  document.body.classList.remove("rice-shop-immersive");
   if (activeSpecialGame === "bird") unmountDiligentBird();
   else if (activeSpecialGame === "rice_shop") unmountRiceShop();
   else if (activeSpecialGame === "translate" || activeSpecialGame === "sentence") unmountLearningGames();
@@ -444,6 +445,8 @@ async function launchSpecialGame(gameId) {
   if (gameId === "rice_shop" && cards.length < 2) return toast("Cần ít nhất 2 từ theo bộ lọc để mở Quán cơm tấm.", "warn");
   const root = specialStageShell(modeName(gameId));
   if (!root) return;
+  root.closest(".special-stage-shell")?.classList.toggle("is-rice-shop", gameId === "rice_shop");
+  document.body.classList.toggle("rice-shop-immersive", gameId === "rice_shop");
   activeSpecialGame = gameId;
   activeSpecialStartedAt = Date.now();
   const finish = (summary) => { recordSpecialResult(gameId, summary).catch(console.error); };
@@ -510,91 +513,34 @@ async function markWrong(card) {
 }
 
 /* ---------- Rescue Monkey arena ---------- */
-const RM_BASE = "assets/games/rescue-monkey/";
-const RM = {
-  milo: { idle: "sprites/milo/idle.png", ready: "sprites/milo/ready.png", run: "sprites/milo/run.png", windup: "sprites/milo/bomb_windup.png", throw: "sprites/milo/throw.png", bomb: "sprites/milo/bomb_flying.png", hit: "sprites/milo/hit.png", win: "sprites/milo/victory.png" },
-  yeti: { idle: "sprites/yeti/idle.png", walk1: "sprites/yeti/walk_1.png", walk2: "sprites/yeti/walk_2.png", windup: "sprites/yeti/attack_windup.png", throw: "sprites/yeti/throw_rock.png", hit: "sprites/yeti/hit.png", knockback: "sprites/yeti/knockback.png", defeated: "sprites/yeti/defeated.png" },
-  fx: { rock: "fx/rock_1.png", boom1: "fx/explosion_fire_1.png", boom2: "fx/explosion_fire_2.png" },
-};
 const RM_START = 15;
-const RM_MIN = 2;
-const RM_MAX = 40;
-const RM_HIT = 5;
-const RM_PENALTY = 4;
-const rmSrc = (rel) => RM_BASE + rel;
-let rmTimers = [];
-const rmLater = (fn, ms) => { rmTimers.push(setTimeout(fn, ms)); };
-function rmClear() {
-  rmTimers.forEach(clearTimeout);
-  rmTimers = [];
-}
-const rmPrefersReduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
-const rmEl = (sel) => document.querySelector(sel);
-const rmSetImg = (sel, rel) => {
-  const img = rmEl(sel);
-  if (img && rel) img.setAttribute("src", rmSrc(rel));
-};
-const rmSetMilo = (state) => rmSetImg("#rm-milo-img", RM.milo[state] || RM.milo.idle);
-const rmSetYeti = (state) => rmSetImg("#rm-yeti-img", RM.yeti[state] || RM.yeti.idle);
-const rmShowFx = (sel) => rmEl(sel)?.classList.add("is-on");
-const rmHideFx = () => document.querySelectorAll(".rm-fx").forEach((el) => el.classList.remove("is-on"));
-const rmClamp = (value) => Math.min(RM_MAX, Math.max(RM_MIN, Math.round(value)));
 const rmVariant = () => (studySession?.mode === "mixed" ? studySession.plan?.[studySession.index] : studySession?.mode);
 const rmActive = () => ["quiz", "typing"].includes(rmVariant());
 
-function rmSyncHud() {
-  const distance = rmClamp(studySession?.distance ?? RM_START);
-  const label = rmEl("#rm-distance");
-  const fill = rmEl("#rm-distance-fill");
-  const bar = rmEl("#rm-distance-bar");
-  if (label) label.textContent = `${distance}m`;
-  if (fill) fill.style.width = `${Math.round((distance / RM_MAX) * 100)}%`;
-  if (bar) bar.setAttribute("aria-valuenow", String(distance));
-  return distance;
+function rmClear() {
+  moduleRmClearTimers();
 }
 
 function rmArenaHTML() {
   if (!rmActive()) return "";
-  const distance = rmClamp(studySession?.distance ?? RM_START);
-  return `<section class="rm-arena" id="rm-arena" aria-label="Đấu trường Rescue Monkey">
-  <div class="rm-hud"><span class="rm-hud-chip">Khoảng cách Milo → Yeti</span>
-  <div class="rm-distance-bar" id="rm-distance-bar" role="progressbar" aria-label="Khoảng cách Milo tới Yeti" aria-valuemin="${RM_MIN}" aria-valuemax="${RM_MAX}" aria-valuenow="${distance}"><span id="rm-distance-fill" style="width:${Math.round((distance / RM_MAX) * 100)}%"></span></div>
-  <strong class="rm-distance" id="rm-distance">${distance}m</strong></div>
-  <div class="rm-ground" aria-hidden="true"></div>
-  <div class="rm-milo" aria-hidden="true"><img id="rm-milo-img" src="${rmSrc(RM.milo.idle)}" alt=""></div>
-  <div class="rm-bomb rm-fx" aria-hidden="true"><img src="${rmSrc(RM.milo.bomb)}" alt=""></div>
-  <div class="rm-rock rm-fx" aria-hidden="true"><img src="${rmSrc(RM.fx.rock)}" alt=""></div>
-  <div class="rm-explosion rm-fx" aria-hidden="true"><img src="${rmSrc(RM.fx.boom1)}" alt=""></div>
-  <div class="rm-yeti" aria-hidden="true"><img id="rm-yeti-img" src="${rmSrc(RM.yeti.idle)}" alt=""></div>
-  </section>`;
+  return moduleRmArenaHTML(studySession?.distance ?? RM_START);
 }
 
 function rmPlay(correct, done) {
   const s = studySession;
-  const arena = rmEl("#rm-arena");
-  if (!s || !arena) { done?.(); return; }
+  const root = stageEl();
+  if (!s || !root || !rmActive()) { done?.(); return; }
   s.animating = true;
-  if (rmPrefersReduced()) {
-    s.distance = rmClamp(s.distance + (correct ? RM_HIT : -RM_PENALTY));
-    rmSyncHud();
-    s.animating = false;
-    done?.();
-    return;
-  }
-  if (correct) {
-    rmSetMilo("windup");
-    rmLater(() => { rmSetMilo("throw"); arena.classList.add("anim-correct"); }, 320);
-    rmLater(() => { rmSetImg(".rm-explosion img", RM.fx.boom2); rmShowFx(".rm-explosion"); }, 880);
-    rmLater(() => { rmSetYeti("hit"); }, 940);
-    rmLater(() => { s.distance = rmClamp(s.distance + RM_HIT); rmSyncHud(); rmSetYeti("knockback"); }, 1060);
-    rmLater(() => { arena.classList.remove("anim-correct"); rmHideFx(); rmSetYeti("idle"); rmSetMilo("ready"); s.animating = false; done?.(); }, 1520);
-  } else {
-    rmSetYeti("windup");
-    rmLater(() => { rmSetYeti("throw"); arena.classList.add("anim-wrong"); }, 320);
-    rmLater(() => { rmSetMilo("hit"); rmSetYeti("walk1"); }, 880);
-    rmLater(() => { s.distance = rmClamp(s.distance - RM_PENALTY); rmSyncHud(); rmSetYeti("walk2"); }, 1020);
-    rmLater(() => { arena.classList.remove("anim-wrong"); rmHideFx(); rmSetMilo("idle"); rmSetYeti("idle"); s.animating = false; done?.(); }, 1460);
-  }
+  moduleRmPlay(root, correct, {
+    distance: s.distance ?? RM_START,
+    onHud: (distance) => { s.distance = distance; },
+    onLock: (locked) => { s.animating = Boolean(locked); },
+    onDone: (distance) => {
+      s.distance = distance;
+      s.animating = false;
+      done?.();
+    },
+  });
 }
 function startMode(mode, { srs = false, quiet = false } = {}) {
   const meta = modeMeta(mode);

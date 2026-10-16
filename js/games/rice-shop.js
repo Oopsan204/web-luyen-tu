@@ -22,6 +22,8 @@ export const RS_ASSETS = {
   station: {
     grill: `${A}/station/grill.png`,
     plate: `${A}/station/plate_single.png`,
+    platesM: `${A}/station/plates_m.png`,
+    platesL: `${A}/station/plates_l.png`,
     tray: `${A}/station/serving_tray.png`,
     done: `${A}/station/completed_plate.png`,
     drink: `${A}/station/drink_card.png`,
@@ -75,6 +77,7 @@ export const dishById = (id) => DISHES.find((d) => d.id === id) || null;
 export const clamp01 = (n) => Math.min(1, Math.max(0, Number.isFinite(n) ? n : 0));
 
 export const DEFAULT_PATIENCE = { correct: 0.12, wrong: -0.3, served: 0.05, drainPerSec: 0.1 };
+const GAME_PATIENCE = { ...DEFAULT_PATIENCE, drainPerSec: 0.004 };
 
 export function patienceState(p) {
   const value = clamp01(p);
@@ -199,6 +202,8 @@ export function checkAnswer(challenge, answer) {
 // ------------------------------------------------------------------ state
 const DAY_CUSTOMERS = 5;
 const START_BUDGET = 70;
+const WRONG_PENALTY = 5;
+const DAY_SECONDS = 12 * 60;
 
 export const riceShopState = {
   mounted: false,
@@ -210,12 +215,53 @@ export const riceShopState = {
 let runtime = null;
 
 function freshDay() {
-  return { patience: 1, streak: 0, records: [], spent: 0, index: 0, total: DAY_CUSTOMERS, dishId: null, picked: [], accuracy: null, served: false, answered: false, mode: "quiz", challenge: null, customer: null };
+  return {
+    patience: 1, streak: 0, records: [], index: 0, total: DAY_CUSTOMERS,
+    dishId: null, picked: [], accuracy: null, served: false, answered: false,
+    answerOk: null, answerFeedback: "", mode: "quiz", challenge: null, customer: null,
+  };
+}
+
+function canMakeDish(dish, stock = {}) {
+  return Boolean(dish) && dish.recipe.every((id) => (stock[id] || 0) > 0);
+}
+
+function availableDishes(stock = {}) {
+  return DISHES.filter((dish) => canMakeDish(dish, stock));
+}
+
+function canOpenShop(stock = {}) {
+  return availableDishes(stock).length > 0;
+}
+
+function addStarterStock() {
+  if (!runtime) return;
+  const target = { com: 5, ga: 5, cucumber: 5, nuoc_mam: 5 };
+  for (const [id, wanted] of Object.entries(target)) {
+    while ((runtime.inventory.stock[id] || 0) < wanted) {
+      const result = buyIngredient(runtime.inventory, id, 1);
+      if (!result.ok) return;
+      runtime.inventory = result.state;
+      runtime.prepSpent += result.cost;
+    }
+  }
 }
 
 // ---------------------------------------------------------------- helpers
 function prefersReduced() {
   return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function formatClock(seconds) {
+  const safe = Math.max(0, Math.round(seconds || 0));
+  const m = Math.floor(safe / 60);
+  const s = String(safe % 60).padStart(2, "0");
+  return `${m}:${s}`;
+}
+
+function remainingDaySeconds() {
+  if (!runtime?.dayStartedAt) return DAY_SECONDS;
+  return Math.max(0, DAY_SECONDS - (Date.now() - runtime.dayStartedAt) / 1000);
 }
 
 function trackTimer(id) {
@@ -282,50 +328,97 @@ const customerSprite = (day) => {
 function renderTutorial() {
   const step = runtime.tutorialStep;
   const slides = [
-    { title: "Chào mừng tới Quán Cơm Tấm", text: "Bác Tư dạy bạn cách mở quán: mua nguyên liệu, bán cơm và kiếm coin.", img: RS_ASSETS.bacTu },
-    { title: "Khách gọi món", text: "Khách đọc món. Trả lời đúng từ vựng để bắt đầu xếp đĩa.", img: RS_ASSETS.customers.thinking },
-    { title: "Xếp đĩa thật chuẩn", text: "Chọn đúng nguyên liệu theo công thức, giữ khách vui và nhận tip.", img: RS_ASSETS.chef },
+    { no: "01", title: "Nhập nguyên liệu", text: "Dùng vốn đầu ngày để chuẩn bị đủ nguyên liệu cho món bạn muốn bán.", img: RS_ASSETS.ui.inventory },
+    { no: "02", title: "Nghe khách gọi món", text: "Trả lời câu hỏi từ vựng để xác nhận order và giữ khách vui.", img: RS_ASSETS.bubble.food },
+    { no: "03", title: "Làm món và giao thật nhanh", text: "Chọn đúng nguyên liệu theo công thức, giao món để nhận doanh thu và tip.", img: RS_ASSETS.station.done },
   ];
   const slide = slides[step];
   return `
-  <section class="rs-panel rs-tutorial">
-    <h2>${escapeHTML(slide.title)}</h2>
-    <img class="rs-art" src="${slide.img}" alt="">
-    <p>${escapeHTML(slide.text)}</p>
-    <div class="rs-dots">${slides.map((_, i) => `<i class="${i === step ? "on" : ""}"></i>`).join("")}</div>
-    <button type="button" class="rs-btn rs-btn-primary" data-rs="tutorial-next">${step === slides.length - 1 ? "Vào bếp" : "Tiếp"}</button>
+  <section class="rs-tutorial-scene">
+    <div class="rs-tutorial-brand"><span>🍚</span><strong>QUÁN CƠM TẤM</strong><small>Vocabulary Restaurant</small></div>
+    <img class="rs-tutorial-owner" src="${RS_ASSETS.bacTu}" alt="Bác Tư">
+    <div class="rs-tutorial-modal">
+      <p class="rs-kicker">HƯỚNG DẪN NHANH</p>
+      <h2>${escapeHTML(slide.title)}</h2>
+      <div class="rs-tutorial-step">
+        <b>${slide.no}</b>
+        <img src="${slide.img}" alt="">
+        <p>${escapeHTML(slide.text)}</p>
+      </div>
+      <div class="rs-dots">${slides.map((_, i) => `<i class="${i === step ? "on" : ""}"></i>`).join("")}</div>
+      <button type="button" class="rs-btn rs-btn-primary rs-btn-hero" data-rs="tutorial-next">${step === slides.length - 1 ? "BẮT ĐẦU BÁN" : "TIẾP TỤC"}</button>
+    </div>
   </section>`;
 }
 
 function renderPrep() {
   const { budget, stock } = runtime.inventory;
+  const readyDishes = availableDishes(stock);
   const stockable = INGREDIENTS.map((item) => `
-    <button type="button" class="rs-item" data-rs="buy" data-id="${item.id}">
+    <button type="button" class="rs-item rs-market-item" data-rs="buy" data-id="${item.id}" ${budget < item.cost ? "disabled" : ""}>
       <img src="${item.img}" alt="">
       <span class="rs-item-name">${escapeHTML(item.name)}</span>
       <span class="rs-item-cost">${item.cost} coin</span>
       <span class="rs-item-qty">x${stock[item.id] || 0}</span>
     </button>`).join("");
+  const menu = DISHES.map((dish) => `<article class="rs-menu-card ${canMakeDish(dish, stock) ? "is-ready" : ""}">
+    <img src="${dish.plate}" alt=""><div><strong>${escapeHTML(dish.name)}</strong><small>${dish.price} coin</small></div>
+  </article>`).join("");
   return `
-  <section class="rs-panel rs-prep">
-    <header class="rs-budget"><img class="rs-card-art" src="${RS_ASSETS.ui.inventory}" alt=""><h2>Đi chợ</h2><b class="rs-coins" data-rs="budget">${budget} coin</b></header>
-    <p class="rs-hint">Chọn nguyên liệu cho thực đơn hôm nay (có ${START_BUDGET} coin vốn).</p>
-    <div class="rs-grid rs-market">${stockable}</div>
-    <footer class="rs-actions"><button type="button" class="rs-btn rs-btn-primary" data-rs="open-day">Mở quán</button></footer>
+  <section class="rs-prep-scene">
+    <aside class="rs-prep-menu">
+      <div class="rs-prep-brand"><span>🍚</span><div><strong>QUÁN CƠM TẤM</strong><small>Thực đơn hôm nay</small></div></div>
+      <div class="rs-menu-list">${menu}</div>
+      <div class="rs-ready">
+        <strong>${readyDishes.length ? `Sẵn sàng bán ${readyDishes.length} món` : "Chưa đủ nguyên liệu mở quán"}</strong>
+        <small>${readyDishes.length ? readyDishes.map((dish) => escapeHTML(dish.name)).join(" · ") : "Bạn cần đủ ít nhất một công thức."}</small>
+      </div>
+      <img class="rs-prep-chef" src="${RS_ASSETS.chef}" alt="">
+    </aside>
+    <section class="rs-prep-inventory">
+      <header class="rs-prep-topbar">
+        <div><p class="rs-kicker">CHUẨN BỊ NGÀY BÁN</p><h2>Kho nguyên liệu</h2></div>
+        <div class="rs-budget-pill"><small>Ngân sách</small><b data-rs="budget">${budget} coin</b></div>
+      </header>
+      <div class="rs-prep-tabs" aria-hidden="true"><span class="on">Kho</span><span>Nâng cấp</span><span>Đánh giá</span></div>
+      <p class="rs-hint">Vốn đầu ngày ${START_BUDGET} coin · đã nhập ${runtime.prepSpent} coin. Chạm nguyên liệu để mua thêm.</p>
+      <div class="rs-grid rs-market">${stockable}</div>
+      <footer class="rs-prep-footer">
+        <button type="button" class="rs-btn" data-rs="starter-stock">Nhập kho gợi ý</button>
+        <button type="button" class="rs-btn rs-btn-primary rs-btn-hero" data-rs="open-day" ${canOpenShop(stock) ? "" : "disabled"}>MỞ CỬA NGÀY 1</button>
+      </footer>
+    </section>
   </section>`;
 }
 
 function renderChallenge(day) {
   if (!day.challenge) return "";
-  if (day.mode === "typing") {
-    return `<div class="rs-challenge"><img class="rs-card-art" src="${RS_ASSETS.ui.quiz}" alt="">
-      <p class="rs-prompt">Nghe khách gọi: <b>${escapeHTML(day.challenge.meaning)}</b> là từ nào?</p>
-      <form class="rs-typing" data-rs="typing-form"><input name="answer" autocomplete="off" aria-label="Gõ từ tiếng Anh" placeholder="Gõ từ..."><button type="submit" class="rs-btn">Trả lời</button></form>
+  if (day.answered) {
+    return `<div class="rs-order-status ${day.answerOk ? "is-ok" : "is-bad"}" role="status">
+      <strong>${day.answerOk ? "✓ Order đã xác nhận" : "✕ Trả lời sai"}</strong>
+      <span>${escapeHTML(day.answerFeedback)}</span>
     </div>`;
   }
-  return `<div class="rs-challenge"><img class="rs-card-art" src="${RS_ASSETS.ui.quiz}" alt="">
-    <p class="rs-prompt">Khách gọi món <b>${escapeHTML(day.challenge.meaning)}</b> — chọn từ đúng:</p>
-    <div class="rs-options">${day.challenge.options.map((opt) => `<button type="button" class="rs-btn" data-rs="answer" data-value="${escapeHTML(opt)}">${escapeHTML(opt)}</button>`).join("")}</div>
+  if (day.mode === "typing") {
+    return `<div class="rs-quiz-overlay">
+      <div class="rs-quiz-modal">
+        <p class="rs-kicker">THỬ THÁCH TỪ VỰNG</p>
+        <h3>${escapeHTML(day.challenge.meaning)}</h3>
+        <p>Khách đang gọi món. Gõ từ tiếng Anh tương ứng để xác nhận order.</p>
+        <form class="rs-typing" data-rs="typing-form">
+          <input name="answer" autocomplete="off" aria-label="Gõ từ tiếng Anh" placeholder="Nhập từ tiếng Anh...">
+          <button type="submit" class="rs-btn rs-btn-primary">Xác nhận</button>
+        </form>
+      </div>
+    </div>`;
+  }
+  return `<div class="rs-quiz-overlay">
+    <div class="rs-quiz-modal">
+      <p class="rs-kicker">THỬ THÁCH TỪ VỰNG</p>
+      <h3>${escapeHTML(day.challenge.meaning)}</h3>
+      <p>Chọn từ tiếng Anh đúng để xác nhận order của khách.</p>
+      <div class="rs-options">${day.challenge.options.map((opt, i) => `<button type="button" class="rs-answer-btn" data-rs="answer" data-value="${escapeHTML(opt)}"><b>${String.fromCharCode(65 + i)}</b><span>${escapeHTML(opt)}</span></button>`).join("")}</div>
+    </div>
   </div>`;
 }
 
@@ -335,20 +428,45 @@ function renderPlate(day) {
     const item = ingredientById(id);
     return item ? `<li data-rs="picked" data-id="${item.id}"><img src="${item.img}" alt=""><span>${escapeHTML(item.name)}</span></li>` : "";
   }).join("");
-  const leftovers = INGREDIENTS.filter((item) => (runtime.inventory.stock[item.id] || 0) > 0 && !day.picked.includes(item.id))
-    .map((item) => `<button type="button" class="rs-item" data-rs="pick" data-id="${item.id}"><img src="${item.img}" alt=""><span>${escapeHTML(item.name)}</span><span class="rs-item-qty">x${runtime.inventory.stock[item.id]}</span></button>`).join("");
+  const foodItems = INGREDIENTS.filter((item) => item.id !== "drink" && (runtime.inventory.stock[item.id] || 0) > 0 && !day.picked.includes(item.id))
+    .map((item) => `<button type="button" class="rs-item rs-kitchen-item" data-rs="pick" data-id="${item.id}" ${day.answered ? "" : "disabled"}>
+      <img src="${item.img}" alt=""><span>${escapeHTML(item.name)}</span><span class="rs-item-qty">x${runtime.inventory.stock[item.id]}</span>
+    </button>`).join("");
+  const canUpsell = (runtime.inventory.stock.drink || 0) > 0 && !day.picked.includes("drink");
   return `
-  <div class="rs-station">
-    <div class="rs-grill"><img src="${RS_ASSETS.station.grill}" alt=""></div>
-    <div class="rs-plate" data-rs="plate">
-      <img class="rs-plate-base" src="${RS_ASSETS.station.plate}" alt="Đĩa cơm đang xếp">
-      <ul class="rs-picked">${picked}</ul>
-      ${dish && day.accuracy !== null ? `<img class="rs-dish-done ${day.accuracy === 1 ? "perfect" : ""}" src="${dish.plate}" alt="${escapeHTML(dish.name)}">` : ""}
+  <section class="rs-kitchen">
+    <div class="rs-kitchen-worktop">
+      <div class="rs-cook-zone">
+        <span class="rs-zone-label">BẾP NƯỚNG</span>
+        <img class="rs-grill-art" src="${RS_ASSETS.station.grill}" alt="Bếp nướng">
+      </div>
+      <div class="rs-plate-zone">
+        <span class="rs-zone-label">ĐĨA ĐANG LÀM</span>
+        <div class="rs-plate" data-rs="plate">
+          <img class="rs-plate-base" src="${RS_ASSETS.station.plate}" alt="Đĩa cơm đang xếp">
+          <ul class="rs-picked">${picked}</ul>
+          ${dish && day.accuracy !== null ? `<img class="rs-dish-done ${day.accuracy === 1 ? "perfect" : ""}" src="${dish.plate}" alt="${escapeHTML(dish.name)}">` : ""}
+        </div>
+        <div class="rs-plate-stack" aria-hidden="true">
+          <img src="${RS_ASSETS.station.platesM}" alt=""><img src="${RS_ASSETS.station.platesL}" alt="">
+        </div>
+      </div>
+      <div class="rs-upsell-zone">
+        <span class="rs-zone-label">BÁN KÈM</span>
+        <button type="button" class="rs-drink-card ${day.picked.includes("drink") ? "is-picked" : ""}" data-rs="pick" data-id="drink" ${canUpsell && day.answered ? "" : "disabled"}>
+          <img src="${RS_ASSETS.station.drink}" alt=""><span>Nước uống</span><small>+12 coin</small>
+        </button>
+      </div>
     </div>
-    <img class="rs-tray-bg" src="${RS_ASSETS.station.tray}" alt="">
-    <div class="rs-grid rs-tray">${leftovers}</div>
-    <button type="button" class="rs-btn rs-btn-primary" data-rs="serve" ${day.picked.length ? "" : "disabled"}>Phục vụ</button>
-  </div>`;
+    <div class="rs-ingredient-rack">
+      <div class="rs-rack-title"><strong>Khay nguyên liệu</strong><span>Chạm để đưa lên đĩa</span></div>
+      <div class="rs-grid rs-tray">${foodItems || `<p class="rs-empty-rack">Không còn nguyên liệu khả dụng.</p>`}</div>
+    </div>
+    <div class="rs-plate-actions">
+      <button type="button" class="rs-btn" data-rs="reset-plate" ${day.picked.length && day.accuracy === null ? "" : "disabled"}>↺ Làm lại đĩa</button>
+      <button type="button" class="rs-btn rs-btn-primary rs-serve-btn" data-rs="serve" ${day.picked.length && day.answered ? "" : "disabled"}>GIAO MÓN →</button>
+    </div>
+  </section>`;
 }
 
 function renderDay() {
@@ -356,28 +474,55 @@ function renderDay() {
   const dish = day.dishId ? dishById(day.dishId) : null;
   const reaction = day.accuracy === null ? null : (day.served && day.accuracy === 1 ? RS_ASSETS.reaction.happy : day.accuracy === 0 ? RS_ASSETS.reaction.sad : RS_ASSETS.reaction.neutral);
   const pct = Math.round(clamp01(day.patience) * 100);
+  const customerNo = Math.min(day.index + 1, day.total);
+  const dayProgress = Math.round((customerNo / Math.max(1, day.total)) * 100);
+  const recipe = dish && day.answered ? dish.recipe.map((id) => ingredientById(id)).filter(Boolean) : [];
+  const queuedA = runtime.customers[(day.index + 1) % runtime.customers.length];
+  const queuedB = runtime.customers[(day.index + 2) % runtime.customers.length];
   return `
-  <section class="rs-panel rs-day rs-phase-${patienceState(day.patience)}">
-    <header class="rs-hud">
-      <img class="rs-hud-bg" src="${RS_ASSETS.ui.hud}" alt="">
-      <span class="rs-hud-coins" data-rs="hud-coins"><img src="${RS_ASSETS.food.coin}" alt="">${runtime.earned}</span>
-      <span class="rs-hud-budget">${runtime.inventory.budget} coin</span>
-      <span class="rs-hud-customer">Khách ${Math.min(day.index + 1, day.total)}/${day.total}</span>
-    </header>
-    <div class="rs-customer">
-      <img class="rs-sprite" id="rs-customer-sprite" src="${customerSprite(day)}" alt="Khách hàng">
-      <div class="rs-bubble">
-        <img class="rs-bubble-bg" src="${RS_ASSETS.bubble.food}" alt="">
-        ${dish ? `<img class="rs-bubble-dish" src="${dish.plate}" alt="${escapeHTML(dish.name)}"><span>${escapeHTML(dish.name)}</span>` : ""}
+  <section class="rs-game-scene rs-phase-${patienceState(day.patience)}">
+    <header class="rs-game-hud">
+      <div class="rs-game-title"><span>🍚</span><div><strong>QUÁN CƠM TẤM</strong><small>Ngày bán 1</small></div></div>
+      <div class="rs-hud-progress">
+        <span>Khách ${customerNo}/${day.total}</span>
+        <div class="rs-game-progress" role="progressbar" aria-label="Tiến độ ngày bán" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${dayProgress}"><i style="width:${dayProgress}%"></i></div>
       </div>
-      ${reaction ? `<img class="rs-reaction rs-pop" src="${reaction}" alt="">` : ""}
+      <div class="rs-hud-stat"><small>Thời gian</small><b data-rs="clock">⏱ ${formatClock(remainingDaySeconds())}</b></div>
+      <div class="rs-hud-stat"><small>Doanh thu</small><b data-rs="hud-coins"><img src="${RS_ASSETS.food.coin}" alt="">${runtime.earned}</b></div>
+      <div class="rs-hud-stat"><small>Vốn còn</small><b class="rs-hud-budget">${runtime.inventory.budget} coin</b></div>
+      <button type="button" class="rs-icon-btn" data-rs="restart" aria-label="Chơi lại">↻</button>
+    </header>
+
+    <div class="rs-service-floor">
+      <section class="rs-customer-zone">
+        <div class="rs-queue-label">HÀNG KHÁCH</div>
+        <div class="rs-customer-main">
+          <img class="rs-sprite" id="rs-customer-sprite" src="${customerSprite(day)}" alt="Khách hàng hiện tại">
+          ${reaction ? `<img class="rs-reaction rs-pop" src="${reaction}" alt="">` : ""}
+          <div class="rs-order-bubble">
+            <img src="${RS_ASSETS.bubble.food}" alt="">
+            ${dish ? `<div class="rs-order-content"><img src="${dish.plate}" alt=""><strong>${escapeHTML(dish.name)}</strong><small>${dish.price} coin</small></div>` : ""}
+          </div>
+        </div>
+        <div class="rs-customer-queue" aria-label="Khách đang chờ">
+          <div><img src="${queuedA}" alt=""><span>Tiếp theo</span></div>
+          <div><img src="${queuedB}" alt=""><span>Đang chờ</span></div>
+        </div>
+        <div class="rs-patience-wrap">
+          <div><span>Kiên nhẫn</span><b>${pct}%</b></div>
+          <div class="rs-patience" role="progressbar" aria-label="Kiên nhẫn của khách" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}">
+            <i class="rs-patience-fill" style="width:${pct}%"></i>
+          </div>
+        </div>
+      </section>
+
+      <section class="rs-work-zone">
+        ${day.served ? `<div class="rs-order-status is-ok"><strong>✓ Đã giao món</strong><span>Khách đang nhận món, chuẩn bị order tiếp theo…</span></div>` : day.answered ? renderChallenge(day) : ""}
+        ${recipe.length ? `<div class="rs-recipe"><div><span class="rs-kicker">CÔNG THỨC ORDER</span><strong>${escapeHTML(dish.name)}</strong></div><div class="rs-recipe-steps">${recipe.map((item, i) => `<span><b>${i + 1}</b><img src="${item.img}" alt=""><em>${escapeHTML(item.name)}</em></span>`).join("")}</div></div>` : ""}
+        ${renderPlate(day)}
+      </section>
     </div>
-    <div class="rs-patience" role="progressbar" aria-label="Kiên nhẫn của khách" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}">
-      <img src="${RS_ASSETS.ui.patience}" alt="">
-      <i class="rs-patience-fill" style="width:${pct}%"></i>
-    </div>
-    ${day.served ? "" : renderChallenge(day)}
-    ${renderPlate(day)}
+    ${!day.served && !day.answered ? renderChallenge(day) : ""}
   </section>`;
 }
 
@@ -416,7 +561,9 @@ function nextCustomer() {
   const day = runtime.day;
   if (day.index >= day.total) return endDay();
   const cards = runtime.cards;
-  const dish = runtime.dishPool[Math.floor(runtime.random() * runtime.dishPool.length)];
+  const sellable = availableDishes(runtime.inventory.stock);
+  if (!sellable.length) return endDay();
+  const dish = sellable[Math.floor(runtime.random() * sellable.length)];
   const challenge = buildChallenge(cards, runtime.random);
   day.dishId = dish.id;
   day.picked = [];
@@ -425,11 +572,18 @@ function nextCustomer() {
   day.patience = 1;
   day.challenge = challenge;
   day.answered = false;
+  day.answerOk = null;
+  day.answerFeedback = "";
   day.mode = day.index % 2 === 0 ? "quiz" : "typing";
   day.customer = { sprite: runtime.customers[Math.floor(runtime.random() * runtime.customers.length)] };
-  day.index += 1;
   paint();
   startPatience();
+}
+
+function advanceCustomer() {
+  if (!runtime) return;
+  runtime.day.index += 1;
+  nextCustomer();
 }
 
 function startPatience() {
@@ -444,6 +598,8 @@ function startPatience() {
     day.patience = tickPatience(day.patience, elapsed, runtime.rules);
     const fill = runtime.container?.querySelector(".rs-patience-fill");
     if (fill) fill.style.width = `${Math.round(day.patience * 100)}%`;
+    const clock = runtime.container?.querySelector("[data-rs='clock']");
+    if (clock) clock.textContent = formatClock(remainingDaySeconds());
     runtime.container?.querySelector(".rs-day")?.classList.toggle("rs-phase-angry", patienceState(day.patience) === "angry");
     if (day.patience <= 0) customerLeft();
   }, 200);
@@ -457,6 +613,11 @@ function stopPatience() {
 function customerLeft() {
   const day = runtime.day;
   stopPatience();
+  if (day.picked.length) {
+    const stock = { ...runtime.inventory.stock };
+    for (const id of day.picked) stock[id] = (stock[id] || 0) + 1;
+    runtime.inventory = { ...runtime.inventory, stock };
+  }
   day.served = false;
   day.accuracy = 0;
   day.picked = [];
@@ -464,21 +625,26 @@ function customerLeft() {
   runtime.day.streak = 0;
   day.records.push({ price: 0, accuracy: 0, patience: 0, tip: 0, served: false });
   paint();
-  timeout(nextCustomer, 900);
+  timeout(advanceCustomer, 900);
 }
 
 function resolveAnswer(ok) {
   const day = runtime.day;
   if (day.served || day.answered) return false;
+  day.answered = true;
+  day.answerOk = Boolean(ok);
   if (!ok) {
     day.patience = applyPatience(day.patience, "wrong", runtime.rules);
     day.streak = 0;
-
+    const loss = Math.min(WRONG_PENALTY, runtime.inventory.budget);
+    runtime.inventory = { ...runtime.inventory, budget: runtime.inventory.budget - loss };
+    runtime.penalties += loss;
+    day.answerFeedback = `Sai. Đáp án là "${day.challenge?.term || ""}". Mất ${loss} coin vốn.`;
     paint();
     if (day.patience <= 0) customerLeft();
     return false;
   }
-  day.answered = true;
+  day.answerFeedback = "Đúng! Khách đồng ý gọi món — làm đĩa thật nhanh.";
   day.patience = applyPatience(day.patience, "correct", runtime.rules);
   day.streak += 1;
   const sprite = runtime.container?.querySelector("#rs-customer-sprite");
@@ -490,7 +656,7 @@ function resolveAnswer(ok) {
 function pickIngredient(id, sourceEl) {
   const day = runtime.day;
   const dish = dishById(day.dishId);
-  if (!dish || day.served || day.accuracy !== null) return;
+  if (!dish || day.served || day.accuracy !== null || !day.answered) return;
   if (day.picked.includes(id)) return;
   const store = consumeStock(runtime.inventory, [id]);
   if (!store.ok) return;
@@ -501,11 +667,22 @@ function pickIngredient(id, sourceEl) {
   paint();
 }
 
+function resetPlate() {
+  const day = runtime.day;
+  if (!day || day.served || day.accuracy !== null || !day.picked.length) return;
+  const stock = { ...runtime.inventory.stock };
+  for (const id of day.picked) stock[id] = (stock[id] || 0) + 1;
+  runtime.inventory = { ...runtime.inventory, stock };
+  day.picked = [];
+  paint();
+}
+
 function servePlate() {
   const day = runtime.day;
   const dish = dishById(day.dishId);
   if (!dish || day.accuracy !== null) return;
-  const result = plateAccuracy(dish.recipe, day.picked);
+  const foodPicked = day.picked.filter((id) => id !== "drink");
+  const result = plateAccuracy(dish.recipe, foodPicked);
   day.accuracy = Number(result.accuracy.toFixed(2));
   day.served = day.picked.length > 0;
   stopPatience();
@@ -521,19 +698,19 @@ function servePlate() {
       flySprite(plate, hud, RS_ASSETS.food.coin, { size: 30, duration: 620, fade: true });
       burst(plate, RS_ASSETS.food.sparkle);
     }
-    if (hud) hud.innerHTML = `<img src="${RS_ASSETS.food.coin}" alt="">${runtime.earned}`;
+    if (hud) hud.innerHTML = `<img src="${RS_ASSETS.food.coin}" alt="">Doanh thu ${runtime.earned}`;
     runtime.onScore?.({ coins: price + tip, stars: 3, accuracy: day.accuracy });
   } else {
     day.streak = 0;
   }
   day.records.push({ price, accuracy: day.accuracy, patience: day.patience, tip, served: day.served });
   paint();
-  timeout(nextCustomer, day.served ? 1100 : 900);
+  timeout(advanceCustomer, day.served ? 1100 : 900);
 }
 
 function endDay() {
   stopPatience();
-  const summary = settleDay(runtime.day.records, { spent: runtime.day.spent });
+  const summary = settleDay(runtime.day.records, { spent: runtime.prepSpent + runtime.penalties });
   runtime.summary = summary;
   runtime.phase = "report";
   paint();
@@ -556,12 +733,16 @@ function onEvent(event) {
     const result = buyIngredient(runtime.inventory, target.dataset.id, 1);
     if (result.ok) {
       runtime.inventory = result.state;
-      runtime.day.spent += result.cost;
+      runtime.prepSpent += result.cost;
       paint();
     }
+  } else if (action === "starter-stock") {
+    addStarterStock();
+    paint();
   } else if (action === "open-day") {
-    if (inventoryValue(runtime.inventory) <= 0) return;
+    if (!canOpenShop(runtime.inventory.stock)) return;
     runtime.phase = "day";
+    runtime.dayStartedAt = Date.now();
     runtime.day = freshDay();
     nextCustomer();
   } else if (action === "answer") {
@@ -572,6 +753,12 @@ function onEvent(event) {
   } else if (action === "pick") {
     event.preventDefault();
     pickIngredient(target.dataset.id, target.querySelector("img") || target);
+  } else if (action === "restart") {
+    event.preventDefault();
+    startRiceShop();
+  } else if (action === "reset-plate") {
+    event.preventDefault();
+    resetPlate();
   } else if (action === "serve") {
     event.preventDefault();
     servePlate();
@@ -591,7 +778,7 @@ function onSubmit(event) {
 }
 
 // -------------------------------------------------------------------- API
-export function mountRiceShop(containerEl, { cards = [], onFinish, onScore, random = Math.random, rules = DEFAULT_PATIENCE } = {}) {
+export function mountRiceShop(containerEl, { cards = [], onFinish, onScore, random = Math.random, rules = GAME_PATIENCE } = {}) {
   unmountRiceShop();
   runtime = {
     container: containerEl,
@@ -604,6 +791,9 @@ export function mountRiceShop(containerEl, { cards = [], onFinish, onScore, rand
     patienceTimer: null,
     tutorialStep: 0,
     earned: 0,
+    prepSpent: 0,
+    penalties: 0,
+    dayStartedAt: null,
     inventory: { budget: START_BUDGET, stock: {} },
     day: freshDay(),
     dishPool: DISHES,
@@ -624,6 +814,9 @@ export function startRiceShop() {
   if (!runtime || !runtime.container) return false;
   runtime.tutorialStep = 0;
   runtime.earned = 0;
+  runtime.prepSpent = 0;
+  runtime.penalties = 0;
+  runtime.dayStartedAt = null;
   runtime.inventory = { budget: START_BUDGET, stock: {} };
   runtime.day = freshDay();
   runtime.summary = null;

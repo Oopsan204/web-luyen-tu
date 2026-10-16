@@ -219,15 +219,15 @@ function panelOpen(panelPng, extra = "") {
 const hintLine = `<p class="lg-hintline" data-lg-hint></p><div data-lg-feedback></div></div>`;
 
 function renderTranslate(q) {
-  q.container.querySelector("[data-lg-root]").innerHTML = `<div class="lg-stage">${topBar("Dịch sang tiếng Việt", "Gõ nghĩa rồi Enter.", LG_ASSETS.robot.pointing, "is-explain")}${panelOpen(
+  session.container.querySelector("[data-lg-root]").innerHTML = `<div class="lg-stage">${topBar("Dịch sang tiếng Việt", "Gõ nghĩa rồi Enter.", LG_ASSETS.robot.pointing, "is-explain")}${panelOpen(
     LG_ASSETS.ui.translationPanel,
     `<div class="lg-q"><h2>${escapeHTML(q.card.term)}</h2><p class="hint">${escapeHTML(q.card.pronunciation || "")}</p>${q.card.example ? `<p class="hint">VD: ${escapeHTML(q.card.example)}</p>` : ""}<img src="${LG_ASSETS.stationery.notebookOpen}" alt="" width="40" height="40"></div><form class="lg-form" data-lg-form><input name="answer" autocomplete="off" placeholder="Nghĩa tiếng Việt…" aria-label="Nghĩa tiếng Việt"><button class="btn btn-primary" type="submit">Kiểm tra</button></form><div class="lg-tools"><button class="btn btn-small lg-iconbtn" type="button" data-lg="hint"><img src="${LG_ASSETS.stationery.pencil}" alt="">Gợi ý</button><button class="btn btn-small lg-iconbtn" type="button" data-lg="speak"><img src="${LG_ASSETS.ui.hello}" alt="">Nghe</button><button class="btn btn-small" type="button" data-lg="skip">Bỏ qua</button></div>${hintLine}`,
   )}</div>`;
-  q.container.querySelector('[name="answer"]')?.focus?.();
+  session.container.querySelector('[name="answer"]')?.focus?.();
 }
 
 function renderSentence(q) {
-  q.container.querySelector("[data-lg-root]").innerHTML = `<div class="lg-stage">${topBar("Ghép từ thành câu", "Bấm từng từ theo đúng thứ tự.", LG_ASSETS.robot.tablet, "is-explain")}${panelOpen(
+  session.container.querySelector("[data-lg-root]").innerHTML = `<div class="lg-stage">${topBar("Ghép từ thành câu", "Bấm từng từ theo đúng thứ tự.", LG_ASSETS.robot.tablet, "is-explain")}${panelOpen(
     LG_ASSETS.ui.sentencePanel,
     `<p class="hint">Nghĩa gợi ý: ${escapeHTML(q.card.meaning)} <img src="${LG_ASSETS.stationery.notebookClosed}" alt="" width="28" height="28"></p><div class="lg-answer" data-lg-answer></div><div class="lg-bank" data-lg-bank style="background-image:url('${LG_ASSETS.ui.wordTiles}')"></div><div class="lg-tools"><button class="btn btn-small lg-iconbtn" type="button" data-lg="undo"><img src="${LG_ASSETS.stationery.eraser}" alt="">Xóa từ cuối</button><button class="btn btn-small" type="button" data-lg="reset">Làm lại</button><button class="btn btn-small lg-iconbtn" type="button" data-lg="hint"><img src="${LG_ASSETS.stationery.pencil}" alt="">Gợi ý</button><button class="btn btn-small lg-iconbtn" type="button" data-lg="speak"><img src="${LG_ASSETS.ui.hello}" alt="">Nghe câu</button><button class="btn btn-small" type="button" data-lg="skip">Bỏ qua</button></div>${hintLine}`,
   )}</div>`;
