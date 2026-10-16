@@ -68,3 +68,4 @@ Không có dữ liệu nào được gửi ra mạng. Xóa dữ liệu bằng n�
 Ghi chú IndexedDB: tab đang mở tự đóng kết nối khi có tab khác nâng version (không còn cảnh báo blocked), reset nhiều tab chạy an toàn, và khi người dùng xóa hết deck/card thì ứng dụng không tự seed lại dữ liệu mẫu.
 
 Khuyến nghị Chrome/Edge/Firefox/Safari bản mới. Chế độ Nghe viết cần Web Speech Synthesis; ứng dụng sẽ thông báo nếu trình duyệt không hỗ trợ.
+# web-luyen-tu
