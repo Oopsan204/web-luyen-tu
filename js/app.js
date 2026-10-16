@@ -1,6 +1,13 @@
 import { calculateSrs, computeStudyStats, escapeHTML, parseCSV, shuffle, toCSV, uid } from "./core.js";
 import * as coreModule from "./core.js";
 import { deleteDeckCascade, getSnapshot, put, remove, replaceAll, resetDatabase, saveActivity, seedDatabase } from "./db.js";
+import {
+  openSpecialHub, closeSpecialHub,
+  rmArenaHTML as moduleRmArenaHTML, rmPlay as moduleRmPlay, rmClearTimers as moduleRmClearTimers,
+  mountDiligentBird, startDiligentBird, unmountDiligentBird,
+  mountLearningGames, unmountLearningGames,
+  mountRiceShop, startRiceShop, unmountRiceShop,
+} from "./games/index.js";
 
 const view = document.querySelector("#view");
 const modal = document.querySelector("#modal");
@@ -22,6 +29,8 @@ let importTargetDeck = null;
 let searchTerm = "";
 let vocabSearch = "";
 let listenRate = 1;
+let activeSpecialGame = null;
+let activeSpecialStartedAt = 0;
 try {
   const storedRate = Number(localStorage.getItem("luyen-tu-listen-rate"));
   if (storedRate === 0.7 || storedRate === 1) listenRate = storedRate;
@@ -45,7 +54,10 @@ const deckLabel = (id) => (id === "all" || !id ? "Tất cả bộ" : deckById(id
 const cardsForDeck = (id) => (!id || id === "all" ? [...data.cards] : data.cards.filter((c) => c.deckId === id));
 const dueCards = (cards = data.cards, now = new Date()) => cards.filter((c) => !c.dueAt || new Date(c.dueAt) <= now);
 const levelLabel = (l) => ({ new: "Mới", learning: "Đang học", mastered: "Đã thuộc" })[l] || "Mới";
-const modeName = (m) => ({ flashcard: "Flashcard", quiz: "Trắc nghiệm", match: "Nối từ", typing: "Gõ từ", listening: "Nghe viết", mixed: "Luyện tổng hợp" })[m] || m;
+const modeName = (m) => ({
+  flashcard: "Flashcard", quiz: "Trắc nghiệm", match: "Nối từ", typing: "Gõ từ", listening: "Nghe viết", mixed: "Luyện tổng hợp",
+  rescue_monkey: "Giải cứu khỉ", bird: "Chim Chăm Chỉ", rice_shop: "Quán cơm tấm", translate: "Dịch câu", sentence: "Luyện đặt câu",
+})[m] || m;
 const formatDate = (v) => { try { return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(v)); } catch { return ""; } };
 const relativeTime = (v) => {
   const m = Math.floor((Date.now() - new Date(v).getTime()) / 60_000);
@@ -102,6 +114,8 @@ function setPage(name) {
     l.dataset.nav === name || (name === "deck" && l.dataset.nav === "decks") || (name === "game" && l.dataset.nav === "games")));
 }
 function renderRoute() {
+  stopSpecialGame();
+  closeSpecialHub();
   rmClear();
   const route = currentRoute();
   setPage(route.name);
@@ -298,6 +312,18 @@ function modeCard(meta) {
   <button class="btn btn-primary btn-small" data-action="start-mode" data-mode="${escapeHTML(meta.id)}">Bắt đầu</button></article>`;
 }
 
+function specialHubLauncher() {
+  const base = "assets/games/special-hub/thumbnails/";
+  return `<article class="card special-hub-launcher">
+    <div class="special-hub-copy"><p class="eyebrow">Arcade học từ</p><h2>Đặc Biệt</h2>
+    <p>Vào các mini-game dùng chính bộ từ đang lọc: Giải cứu khỉ, Chim Chăm Chỉ, Quán cơm tấm, Dịch câu và Đặt câu.</p>
+    <button class="btn btn-primary" type="button" data-action="open-special-hub">Mở danh sách trò chơi</button></div>
+    <div class="special-hub-thumbs" aria-hidden="true">
+      <img src="${base}rescue_monkey.png" alt=""><img src="${base}bird.png" alt="">
+      <img src="${base}rice_shop.png" alt=""><img src="${base}translate.png" alt="">
+    </div></article>`;
+}
+
 function renderStudyEntry(params = new URLSearchParams()) {
   const deckParam = params.get("deck");
   if (deckParam && (deckParam === "all" || deckById(deckParam))) hubFilters.deckId = deckParam;
@@ -313,6 +339,7 @@ function renderStudyEntry(params = new URLSearchParams()) {
   <label class="filter-card"><span>Số lượng</span><select id="hub-limit">${selectOptions(LIMIT_OPTIONS, hubFilters.limit)}</select></label>
   </section>
   <section class="section"><div class="section-title"><h2>Sáu chế độ học</h2><small id="hub-mode-count">${ready.length} từ theo bộ lọc hiện tại</small></div><div class="mode-grid">${MODES.map(modeCard).join("")}</div></section>
+  <section class="section">${specialHubLauncher()}</section>
   <section class="section srs-banner">
   <div class="srs-copy"><p class="eyebrow">Ôn tập ngắt quãng (SRS)</p><h2>${due.length} từ đến hạn</h2><p>Hệ thống tự nhắc lại các từ sắp quên để bạn nhớ lâu hơn mà không học quá tải.</p></div>
   <div class="srs-actions"><strong class="srs-count" aria-hidden="true">${due.length}</strong><button class="btn btn-primary" data-action="start-srs" ${due.length ? "" : "disabled"}>Bắt đầu ôn tập</button></div></section>
@@ -320,6 +347,7 @@ function renderStudyEntry(params = new URLSearchParams()) {
   <section class="section" id="study-stage" aria-live="polite"></section></div>`;
   if (params.get("srs")) startMode("flashcard", { srs: true, quiet: true });
   else if (params.get("mode")) startMode(params.get("mode"), { quiet: true });
+  else if (params.get("special")) launchSpecialGame(params.get("special")).catch(console.error);
 }
 
 function onHubFilterChange(target) {
@@ -349,6 +377,92 @@ function onHubFilterChange(target) {
 
 /* ---------- Phiên học dùng chung ---------- */
 const stageEl = () => document.querySelector("#study-stage");
+
+function stopSpecialGame() {
+  if (activeSpecialGame === "bird") unmountDiligentBird();
+  else if (activeSpecialGame === "rice_shop") unmountRiceShop();
+  else if (activeSpecialGame === "translate" || activeSpecialGame === "sentence") unmountLearningGames();
+  activeSpecialGame = null;
+  activeSpecialStartedAt = 0;
+}
+
+async function recordSpecialResult(gameId, summary = {}) {
+  const correct = Math.max(0, Number(summary.correct ?? summary.served) || 0);
+  const wrong = Math.max(0, Number(summary.wrong ?? summary.lost) || 0);
+  const total = Math.max(correct + wrong, Number(summary.total) || 0);
+  const accuracy = summary.accuracy != null
+    ? Math.round(Number(summary.accuracy) || 0)
+    : summary.satisfaction != null
+      ? Math.round((Number(summary.satisfaction) || 0) * 100)
+      : total ? Math.round((correct / total) * 100) : 0;
+  const xp = Math.max(0, correct * XP_PER_CORRECT);
+  const coins = gameId === "rice_shop"
+    ? Math.max(0, Math.min(50, Math.round((Number(summary.coins) || 0) / 10)))
+    : Math.max(0, correct);
+  const startedAt = activeSpecialStartedAt ? new Date(activeSpecialStartedAt).toISOString() : nowISO();
+  const duration = activeSpecialStartedAt ? Math.max(1, Math.round((Date.now() - activeSpecialStartedAt) / 1000)) : 0;
+  await saveActivity({
+    type: "study", mode: gameId, deckId: hubFilters.deckId, deckName: deckLabel(hubFilters.deckId),
+    total, correct, wrong, accuracy, duration, startedAt, xp, coins, sessionXp: xp, sessionCoins: coins,
+    detail: `${modeName(gameId)} ${correct}/${total || correct + wrong}`,
+  });
+  activeSpecialStartedAt = Date.now();
+  await reload(false);
+  toast(`${modeName(gameId)}: +${xp} XP · +${coins} coin.`);
+}
+
+function specialStageShell(title) {
+  const stage = stageEl();
+  if (!stage) return null;
+  stage.innerHTML = `<div class="special-stage-shell">
+    <div class="special-stage-toolbar"><div><p class="eyebrow">Trò chơi đặc biệt</p><h2>${escapeHTML(title)}</h2></div>
+    <button class="btn" type="button" data-action="exit-special-game">← Về trung tâm học</button></div>
+    <div id="special-game-root"></div></div>`;
+  return stage.querySelector("#special-game-root");
+}
+
+async function launchSpecialGame(gameId) {
+  closeSpecialHub();
+  stopSpecialGame();
+  if (!stageEl()) {
+    location.hash = `#study?special=${encodeURIComponent(gameId)}`;
+    return;
+  }
+  const cards = hubCards();
+  if (gameId === "mixed") return startMode("mixed");
+  if (gameId === "rescue_monkey") {
+    if (cards.length < 4) return toast("Cần ít nhất 4 từ theo bộ lọc để chơi Giải cứu khỉ.", "warn");
+    return openModal(`<h2 id="modal-title">Giải cứu khỉ · Chọn cách chơi</h2>
+      <p>Trả lời đúng để Milo ném bom đẩy Yeti lùi lại.</p>
+      <div class="grid grid-2">
+        <button class="card special-choice rescue-choice quiz" type="button" data-action="start-rescue-special" data-mode="quiz"><strong>Trắc nghiệm</strong><small>Chọn nghĩa đúng · Yeti gây áp lực nhanh hơn.</small></button>
+        <button class="card special-choice rescue-choice typing" type="button" data-action="start-rescue-special" data-mode="typing"><strong>Gõ từ</strong><small>Nhìn nghĩa và gõ từ tiếng Anh.</small></button>
+      </div>
+      <div class="actions"><button class="btn" type="button" data-action="close-modal">Hủy</button></div>`);
+  }
+  if (gameId === "bird" && cards.length < 4) return toast("Cần ít nhất 4 từ theo bộ lọc để chơi Chim Chăm Chỉ.", "warn");
+  if (gameId === "rice_shop" && cards.length < 2) return toast("Cần ít nhất 2 từ theo bộ lọc để mở Quán cơm tấm.", "warn");
+  const root = specialStageShell(modeName(gameId));
+  if (!root) return;
+  activeSpecialGame = gameId;
+  activeSpecialStartedAt = Date.now();
+  const finish = (summary) => { recordSpecialResult(gameId, summary).catch(console.error); };
+  if (gameId === "bird") {
+    mountDiligentBird(root, { cards, limit: Math.min(cards.length, 20), onFinish: finish });
+    startDiligentBird();
+  } else if (gameId === "rice_shop") {
+    mountRiceShop(root, { cards, onFinish: finish });
+    startRiceShop();
+  } else if (gameId === "translate" || gameId === "sentence") {
+    mountLearningGames(root, { mode: gameId, cards, onFinish: finish });
+  }
+}
+
+function openSpecialGames() {
+  openSpecialHub({
+    onSelect: (gameId) => { launchSpecialGame(gameId).catch((error) => { console.error(error); toast("Không mở được trò chơi.", "warn"); }); },
+  });
+}
 
 function sessionChrome() {
   const s = studySession;
@@ -770,28 +884,32 @@ async function finishSession() {
   const attempts = correct + wrong;
   const accuracy = attempts ? Math.round((correct / attempts) * 100) : 0;
   const duration = Math.max(1, Math.round((Date.now() - new Date(s.startedAt).getTime()) / 1000));
+  const activityMode = s.specialMode || s.mode;
   const record = await saveActivity({
-    type: "study", mode: s.mode, deckId: s.deckId, deckName: s.deckName,
+    type: "study", mode: activityMode, deckId: s.deckId, deckName: s.deckName,
     total, correct, wrong, accuracy, duration, startedAt: s.startedAt,
     xp: s.xp, coins: s.coins, sessionXp: s.xp, sessionCoins: s.coins,
-    detail: `${modeName(s.mode)}${s.srs ? " · SRS" : ""} ${correct}/${total}`,
+    detail: `${modeName(activityMode)}${s.specialMode ? ` · ${modeName(s.mode)}` : ""}${s.srs ? " · SRS" : ""} ${correct}/${total}`,
   });
   await reload(false);
   setSession({ ...s, playing: false });
   if (stageEl()) {
     stageEl().innerHTML = `<article class="card study-card result-card">
     <p class="eyebrow">Kết quả phiên học</p>
-    <h2>${escapeHTML(modeName(s.mode))} · ${correct}/${total} đúng (${accuracy}%)</h2>
+    <h2>${escapeHTML(modeName(activityMode))}${s.specialMode ? ` · ${escapeHTML(modeName(s.mode))}` : ""} · ${correct}/${total} đúng (${accuracy}%)</h2>
     <p>Bộ ${escapeHTML(s.deckName)} · ${escapeHTML(fmtDuration(duration))} · +${s.xp} XP · +${s.coins} coin.</p>
     <div class="actions"><a class="btn btn-primary" href="#study">Học tiếp</a><a class="btn" href="#stats">Xem thống kê</a></div></article>`;
   }
-  toast(`Lưu lịch sử học: ${modeName(s.mode)} ${correct}/${total} · +${s.xp} XP · +${s.coins} coin.`);
+  activeSpecialGame = null;
+  activeSpecialStartedAt = 0;
+  toast(`Lưu lịch sử học: ${modeName(activityMode)} ${correct}/${total} · +${s.xp} XP · +${s.coins} coin.`);
 }
 
 /* ---------- Route phụ: trò chơi / thống kê / lộ trình ---------- */
 function renderGames() {
   view.innerHTML = `<div class="page-head"><div><h2>Trò chơi học từ</h2><p>Mọi trò chơi đều vào trung tâm Học từ vựng và dùng chung bộ lọc hiện tại.</p></div></div>
   <div class="mode-grid">${MODES.map(modeCard).join("")}</div>
+  <section class="section">${specialHubLauncher()}</section>
   <section class="section"><div class="section-title"><h2>Lịch sử học</h2><a href="#stats">Thống kê →</a></div>${historyPanel(6)}</section>`;
 }
 
@@ -963,6 +1081,26 @@ async function handleAction(action, target) {
     await seedDatabase();
     await reload();
     toast("Đã khôi phục dữ liệu mẫu.");
+    return;
+  }
+  if (action === "open-special-hub") return openSpecialGames();
+  if (action === "start-rescue-special") {
+    closeModal();
+    stopSpecialGame();
+    const mode = target.dataset.mode === "typing" ? "typing" : "quiz";
+    startMode(mode);
+    if (studySession) {
+      studySession.specialMode = "rescue_monkey";
+      activeSpecialGame = "rescue_monkey";
+      activeSpecialStartedAt = Date.now();
+    }
+    return;
+  }
+  if (action === "exit-special-game") {
+    stopSpecialGame();
+    rmClear();
+    if (studySession?.specialMode) setSession(null);
+    renderStudyEntry(new URLSearchParams());
     return;
   }
   if (action === "start-game") return startMode(target.dataset.mode || "flashcard");
