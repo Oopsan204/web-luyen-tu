@@ -1,0 +1,243 @@
+{
+  "game": "rescue-monkey",
+  "version": 1,
+  "notes": "Original generated assets; use CSS/JS animation. Transparent PNG cutouts.",
+  "animations": {
+    "milo_idle": {
+      "frames": [
+        "sprites/milo/idle.png"
+      ],
+      "css": "bob 1.8s ease-in-out infinite"
+    },
+    "milo_run": {
+      "frames": [
+        "sprites/milo/run.png"
+      ],
+      "css": "translateX + bob"
+    },
+    "milo_throw": {
+      "sequence": [
+        "sprites/milo/bomb_windup.png",
+        "sprites/milo/throw.png"
+      ],
+      "projectile": "sprites/milo/bomb_flying.png"
+    },
+    "milo_hit": {
+      "frames": [
+        "sprites/milo/hit.png"
+      ]
+    },
+    "milo_victory": {
+      "frames": [
+        "sprites/milo/victory.png"
+      ]
+    },
+    "yeti_walk": {
+      "frames": [
+        "sprites/yeti/walk_1.png",
+        "sprites/yeti/walk_2.png"
+      ],
+      "fps": 4
+    },
+    "yeti_attack": {
+      "sequence": [
+        "sprites/yeti/attack_windup.png",
+        "sprites/yeti/throw_rock.png"
+      ],
+      "projectile": "fx/rock_1.png"
+    },
+    "yeti_knockback": {
+      "frames": [
+        "sprites/yeti/knockback.png"
+      ],
+      "fx": "fx/explosion_fire_2.png"
+    },
+    "yeti_defeated": {
+      "frames": [
+        "sprites/yeti/defeated.png"
+      ]
+    }
+  },
+  "sizes": {
+    "milo/idle": [
+      395,
+      411
+    ],
+    "milo/ready": [
+      450,
+      370
+    ],
+    "milo/run": [
+      510,
+      370
+    ],
+    "milo/bomb_windup": [
+      346,
+      438
+    ],
+    "milo/throw": [
+      540,
+      340
+    ],
+    "milo/hit": [
+      450,
+      340
+    ],
+    "milo/victory": [
+      360,
+      350
+    ],
+    "milo/banana_pouch": [
+      257,
+      231
+    ],
+    "milo/bomb_lit": [
+      160,
+      241
+    ],
+    "milo/bomb_unlit": [
+      170,
+      239
+    ],
+    "milo/bomb_flying": [
+      470,
+      241
+    ],
+    "milo/scarf": [
+      420,
+      225
+    ],
+    "milo/flag": [
+      272,
+      338
+    ],
+    "sprites/yeti/idle": [
+      390,
+      377
+    ],
+    "sprites/yeti/walk_1": [
+      320,
+      370
+    ],
+    "sprites/yeti/walk_2": [
+      330,
+      370
+    ],
+    "sprites/yeti/roar": [
+      420,
+      398
+    ],
+    "sprites/yeti/attack_windup": [
+      360,
+      397
+    ],
+    "sprites/yeti/throw_rock": [
+      540,
+      340
+    ],
+    "sprites/yeti/hit": [
+      350,
+      340
+    ],
+    "sprites/yeti/knockback": [
+      440,
+      370
+    ],
+    "sprites/yeti/defeated": [
+      492,
+      346
+    ],
+    "fx/rock_1": [
+      279,
+      230
+    ],
+    "fx/rock_2": [
+      270,
+      251
+    ],
+    "fx/ice_burst": [
+      350,
+      261
+    ],
+    "fx/ice_cluster": [
+      440,
+      261
+    ],
+    "fx/snow_puff": [
+      472,
+      271
+    ],
+    "ui/hud": [
+      1251,
+      128
+    ],
+    "ui/quiz_panel": [
+      660,
+      310
+    ],
+    "ui/typing_panel": [
+      640,
+      310
+    ],
+    "ui/answer_states": [
+      332,
+      380
+    ],
+    "ui/distance_bar": [
+      820,
+      95
+    ],
+    "ui/warning_badge": [
+      350,
+      105
+    ],
+    "fx/explosion_fire_1": [
+      387,
+      260
+    ],
+    "fx/explosion_ice": [
+      340,
+      260
+    ],
+    "fx/explosion_fire_2": [
+      350,
+      260
+    ],
+    "fx/smoke": [
+      230,
+      260
+    ],
+    "fx/bomb_trail": [
+      377,
+      165
+    ],
+    "fx/rock_trail": [
+      400,
+      190
+    ],
+    "fx/platform_long": [
+      430,
+      165
+    ],
+    "fx/platform_short": [
+      360,
+      174
+    ],
+    "fx/torch": [
+      140,
+      261
+    ],
+    "fx/stone_arch": [
+      350,
+      261
+    ],
+    "fx/pine_cluster": [
+      320,
+      261
+    ],
+    "fx/flags": [
+      296,
+      291
+    ]
+  }
+}

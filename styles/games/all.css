@@ -1,0 +1,8 @@
+@import url("./special-hub.css");
+@import url("./rescue-monkey.css");
+@import url("./diligent-bird.css");
+@import url("./learning-games.css");
+@import url("./rice-shop.css");
+
+/* Aggregate entry point for all special-game styles.
+   Keep game-specific rules inside their own files. */

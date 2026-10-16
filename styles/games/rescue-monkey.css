@@ -1,0 +1,197 @@
+/* Rescue Monkey arena — quiz + typing */
+
+.rm-arena {
+  position: relative;
+  overflow: hidden;
+  height: clamp(180px, 26vw, 220px);
+  margin: 0 0 16px;
+  border: 1px solid #dbe6f5;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #eaf4ff 0%, #f7fbff 55%, #fff 100%);
+  box-shadow: inset 0 -1px 0 #e3ecf8;
+}
+
+.rm-ground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34px;
+  background: linear-gradient(180deg, #eef6ff, #dceaf8);
+  border-top: 2px solid #cfe1f4;
+}
+
+.rm-hud {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 3;
+}
+
+.rm-hud-chip {
+  font-size: 11px;
+  font-weight: 750;
+  color: #4b6180;
+  background: rgba(255, 255, 255, .85);
+  border: 1px solid #dbe6f5;
+  border-radius: 20px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.rm-distance-bar {
+  position: relative;
+  flex: 1;
+  height: 10px;
+  border-radius: 20px;
+  background: #e2ecf9;
+  overflow: hidden;
+}
+
+.rm-distance-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #4b8df8, #22b07d);
+  transition: width .35s ease;
+}
+
+.rm-distance {
+  font-size: 13px;
+  color: #33507a;
+  min-width: 46px;
+  text-align: right;
+}
+
+.rm-milo {
+  position: absolute;
+  left: 8%;
+  bottom: 22px;
+  width: clamp(58px, 9vw, 84px);
+  z-index: 2;
+}
+
+.rm-yeti {
+  position: absolute;
+  right: 7%;
+  bottom: 18px;
+  width: clamp(70px, 11vw, 104px);
+  z-index: 2;
+}
+
+.rm-milo img,
+.rm-yeti img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.rm-fx {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.rm-bomb {
+  left: 14%;
+  bottom: 56px;
+  width: clamp(20px, 3vw, 30px);
+}
+
+.rm-rock {
+  right: 16%;
+  bottom: 60px;
+  width: clamp(18px, 2.6vw, 26px);
+}
+
+.rm-explosion {
+  right: 5%;
+  bottom: 30px;
+  width: clamp(60px, 9vw, 96px);
+}
+
+.rm-fx.is-on {
+  opacity: 1;
+}
+
+@keyframes rm-bomb-fly {
+  from { transform: translateX(0) rotate(0deg); opacity: 0; }
+  15% { opacity: 1; }
+  to { transform: translateX(min(64vw, 860px)) translateY(-14px) rotate(320deg); opacity: 1; }
+}
+
+@keyframes rm-rock-fly {
+  from { transform: translateX(0) rotate(0deg); opacity: 0; }
+  15% { opacity: 1; }
+  to { transform: translateX(max(-62vw, -840px)) translateY(10px) rotate(-300deg); opacity: 1; }
+}
+
+@keyframes rm-boom {
+  0% { transform: scale(.35); opacity: 0; }
+  35% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+@keyframes rm-yeti-knock {
+  0% { transform: translateX(0); }
+  35% { transform: translateX(26px) rotate(6deg); }
+  100% { transform: translateX(14px); }
+}
+
+@keyframes rm-yeti-step {
+  from { transform: translateX(0); }
+  to { transform: translateX(-18px); }
+}
+
+@keyframes rm-milo-hit {
+  0%, 100% { transform: translateX(0); }
+  30% { transform: translateX(-16px) rotate(-6deg); }
+  65% { transform: translateX(-8px) rotate(4deg); }
+}
+
+.rm-arena.anim-correct .rm-bomb {
+  animation: rm-bomb-fly 600ms cubic-bezier(.22, .9, .28, 1) forwards;
+}
+
+.rm-arena.anim-correct .rm-explosion {
+  animation: rm-boom 620ms ease-out forwards;
+}
+
+.rm-arena.anim-correct .rm-yeti {
+  animation: rm-yeti-knock 480ms ease-out 620ms forwards;
+}
+
+.rm-arena.anim-wrong .rm-rock {
+  animation: rm-rock-fly 580ms cubic-bezier(.3, .85, .3, 1) forwards;
+}
+
+.rm-arena.anim-wrong .rm-milo {
+  animation: rm-milo-hit 420ms ease-in-out 600ms forwards;
+}
+
+.rm-arena.anim-wrong .rm-yeti {
+  animation: rm-yeti-step 520ms ease-out 600ms forwards;
+}
+
+@media (max-width: 860px) {
+  .rm-arena { height: 170px; }
+  .rm-milo { left: 5%; }
+  .rm-yeti { right: 4%; }
+  .rm-hud-chip { font-size: 10px; padding: 2px 8px; }
+  .rm-distance { font-size: 12px; min-width: 38px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rm-arena *,
+  .rm-arena *::before,
+  .rm-arena *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
+}

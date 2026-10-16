@@ -1,0 +1,84 @@
+// Aggregate exports for special game integration.
+// Parent app should import from this file to reduce merge churn.
+
+export {
+  SPECIAL_GAMES,
+  getSpecialGame,
+  openSpecialHub,
+  closeSpecialHub,
+  isSpecialHubOpen,
+} from "./special-hub.js";
+
+export {
+  RM_CONFIG,
+  rmSrc,
+  rmClamp,
+  calculateDistance,
+  rmMiloSprite,
+  rmYetiSprite,
+  rmArenaHTML,
+  rmClearTimers,
+  rmPlay,
+} from "./rescue-monkey.js";
+
+export {
+  BIRD_ASSET_BASE,
+  BIRD_HEARTS,
+  BIRD_BASE_SCORE,
+  BIRD_COMBO_BONUS,
+  BIRD_COMBO_CAP,
+  BIRD_GATE_COUNT,
+  createBirdQuestion,
+  createBirdSession,
+  birdCurrentQuestion,
+  birdAnswer,
+  birdProgress,
+  birdSummary,
+  mountDiligentBird,
+  startDiligentBird,
+  unmountDiligentBird,
+} from "./diligent-bird.js";
+
+export {
+  LG_ASSETS,
+  normalizeAnswer as normalizeLearningAnswer,
+  splitWords,
+  normalizeSentence,
+  acceptedAnswers,
+  checkTranslation,
+  checkSentenceOrder,
+  buildSentenceChallenge,
+  firstLetterHint,
+  progressiveHint,
+  scoreForResult,
+  createLearningGames,
+  mountLearningGames,
+  startLearningGames,
+  unmountLearningGames,
+} from "./learning-games.js";
+
+export {
+  RS_ASSETS,
+  INGREDIENTS,
+  DISHES,
+  dishById,
+  clamp01,
+  DEFAULT_PATIENCE,
+  patienceState,
+  applyPatience,
+  tickPatience,
+  plateAccuracy,
+  orderPrice,
+  tipFor,
+  buyIngredient,
+  consumeStock,
+  inventoryValue,
+  starsFor,
+  settleDay,
+  buildChallenge as buildRiceShopChallenge,
+  checkAnswer as checkRiceShopAnswer,
+  riceShopState,
+  mountRiceShop,
+  startRiceShop,
+  unmountRiceShop,
+} from "./rice-shop.js";

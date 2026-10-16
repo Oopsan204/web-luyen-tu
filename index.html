@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#6d4aff">
+<meta name="description" content="Luyện Từ — học từ vựng bằng flashcard, SRS và mini game ngay trên trình duyệt.">
+<title>Luyện Từ — Học mỗi ngày</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell" id="app-shell">
+<aside class="sidebar" id="sidebar" aria-label="Điều hướng chính">
+<a class="brand" href="#dashboard" aria-label="Luyện Từ - Trang chủ"><span class="brand-mark">L</span><span class="brand-text">Luyện Từ</span></a>
+<button class="sidebar-toggle" id="sidebar-toggle" aria-label="Thu gọn sidebar" aria-expanded="true" title="Thu gọn / mở rộng">⟨</button>
+<nav class="nav-list" aria-label="Mục chính">
+<a href="#dashboard" data-nav="dashboard"><span aria-hidden="true">⌂</span><em>Trang chủ</em></a>
+<a href="#decks" data-nav="decks"><span aria-hidden="true">▤</span><em>Bộ từ vựng</em></a>
+<a href="#vocabulary" data-nav="vocabulary"><span aria-hidden="true">◍</span><em>Từ vựng</em></a>
+<a href="#study" data-nav="study"><span aria-hidden="true">◫</span><em>Học từ vựng</em></a>
+<a href="#store" data-nav="store"><span aria-hidden="true">●</span><em>Cửa hàng</em></a>
+</nav>
+<nav class="nav-sub" aria-label="Liên kết phụ">
+<a href="#games" data-nav="games">Trò chơi</a>
+<a href="#stats" data-nav="stats">Thống kê</a>
+<a href="#roadmap" data-nav="roadmap">Lộ trình</a>
+</nav>
+<div class="sidebar-card"><div class="sidebar-card-icon" aria-hidden="true">🔥</div><strong id="sidebar-streak">0 ngày liên tiếp</strong><span>Học một chút mỗi ngày</span></div>
+<p class="local-note">● Dữ liệu lưu trên thiết bị</p>
+</aside>
+<main class="main-column">
+<header class="topbar">
+<div class="topbar-left">
+<button class="mobile-menu" id="mobile-menu" aria-label="Mở điều hướng">☰</button>
+<div><p class="eyebrow" id="page-eyebrow">Chào mừng trở lại</p><h1 id="page-title">Tổng quan</h1></div>
+</div>
+<div class="profile-pill" aria-label="Tiến độ người học">
+<span class="stat-chip" title="Streak">🔥 <b id="top-streak">0</b></span>
+<span class="stat-chip" title="XP">⚡ <b id="top-xp">0</b> XP</span>
+<span class="stat-chip coin" title="Coin">● <b id="top-coins">0</b></span>
+<span class="avatar" aria-hidden="true">NT</span>
+</div>
+</header>
+<section id="view" class="view" aria-live="polite"></section>
+</main>
+</div>
+<nav class="bottom-nav" aria-label="Điều hướng di động">
+<a href="#dashboard" data-nav="dashboard"><span aria-hidden="true">⌂</span><small>Trang chủ</small></a>
+<a href="#decks" data-nav="decks"><span aria-hidden="true">▤</span><small>Bộ từ</small></a>
+<a href="#vocabulary" data-nav="vocabulary"><span aria-hidden="true">◍</span><small>Từ vựng</small></a>
+<a href="#study" data-nav="study" class="primary-nav"><span aria-hidden="true">◫</span><small>Học</small></a>
+<a href="#store" data-nav="store"><span aria-hidden="true">●</span><small>Cửa hàng</small></a>
+</nav>
+<div id="modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
+<div class="modal-backdrop" data-action="close-modal"></div>
+<div class="modal-panel"><div id="modal-content"></div></div>
+</div>
+<div id="toast-region" class="toast-region" aria-live="assertive"></div>
+<input id="import-file" type="file" accept=".json,.csv,text/csv,application/json" hidden>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

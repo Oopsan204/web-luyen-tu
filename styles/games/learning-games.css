@@ -1,0 +1,50 @@
+/* Translate / Sentence (learning-games) — Dịch câu + Đặt câu.
+   Panel nền dùng ảnh tách riêng qua inline style (đường dẫn document-relative).
+   Animation/pose/badge trong class; chỉ transform/opacity. */
+.lg-stage{display:grid;gap:12px;max-width:760px;margin:0 auto;min-width:0}
+.lg-top{display:flex;gap:12px;align-items:center;min-width:0}
+.lg-robot{flex:0 0 auto;width:88px;height:88px;display:grid;place-items:center;border-radius:18px;background:#f4f1ff;border:1px solid var(--line,#e6e4f0);overflow:hidden}
+.lg-robot img{width:76px;height:76px;object-fit:contain}
+.lg-robot.is-idle img{animation:lg-bob 2.4s ease-in-out infinite}
+.lg-robot.is-explain img{animation:lg-point 1.6s ease-in-out infinite}
+.lg-robot.is-success img{animation:lg-pop .45s ease-out}
+.lg-speech{flex:1;min-width:0;display:flex;gap:10px;align-items:center;padding:12px 14px;border:1px solid var(--line,#e6e4f0);border-radius:14px;background:#fff}
+.lg-speech img{width:34px;height:34px;flex:0 0 auto}
+.lg-speech strong{display:block;font-size:14px}
+.lg-panel{position:relative;padding:22px;border-radius:18px;border:1px solid var(--line,#e6e4f0);background:#fff center/cover no-repeat;overflow:hidden}
+.lg-q{margin:0;text-align:center}
+.lg-q h2{margin:8px 0;font-size:clamp(24px,4vw,36px)}
+.lg-answer{min-height:52px;display:flex;flex-wrap:wrap;gap:8px;padding:12px;border:2px dashed #cfc8f5;border-radius:14px;background:rgba(255,255,255,.92)}
+.lg-bank{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.lg-tile{padding:10px 14px;border:2px solid var(--line,#e6e4f0);border-radius:12px;background:#fff;font-weight:700;animation:lg-tile-in .28s ease-out backwards}
+.lg-tile:disabled{opacity:.45;cursor:default;animation:none}
+.lg-answer .lg-tile{animation:lg-tile-in .22s ease-out}
+.lg-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.lg-iconbtn{display:inline-flex;align-items:center;gap:6px}
+.lg-iconbtn img{width:20px;height:20px}
+.lg-badge{position:absolute;top:10px;right:10px;width:74px;height:74px;object-fit:contain;opacity:0;pointer-events:none}
+.lg-badge.is-on{opacity:1}
+.lg-badge.is-ok{animation:lg-pop .4s ease-out}
+.lg-badge.is-bad{animation:lg-shake .4s ease-out}
+.lg-panel.is-bad{animation:lg-shake .35s ease-out}
+.lg-sparkle{position:absolute;inset:auto -10px -18px auto;width:120px;opacity:0;pointer-events:none}
+.lg-sparkle.is-on{opacity:1;animation:lg-pop .5s ease-out}
+.lg-form{display:flex;gap:10px;margin-top:12px}
+.lg-form input{flex:1;min-width:0}
+.lg-hintline{margin:8px 0 0;min-height:20px}
+@keyframes lg-bob{50%{transform:translateY(-6px)}}
+@keyframes lg-point{50%{transform:scale(1.06) rotate(-1deg)}}
+@keyframes lg-pop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.08);opacity:1}100%{transform:scale(1)}}
+@keyframes lg-tile-in{0%{transform:translateY(10px) scale(.85);opacity:0}70%{transform:translateY(-2px) scale(1.03);opacity:1}100%{transform:none}}
+@keyframes lg-shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+@media (max-width:520px){
+  .lg-top{align-items:flex-start}
+  .lg-robot{width:68px;height:68px}
+  .lg-robot img{width:58px;height:58px}
+  .lg-badge{width:58px;height:58px}
+  .lg-form{flex-direction:column}
+}
+@media (prefers-reduced-motion:reduce){
+  .lg-robot img,.lg-tile,.lg-badge,.lg-panel{animation:none!important}
+  .lg-badge.is-on,.lg-sparkle.is-on{opacity:1}
+}

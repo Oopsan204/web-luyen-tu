@@ -1,0 +1,18 @@
+ASSET PACKS - LUYEN TU GAMES
+
+Thu muc dich:
+- assets/games/rescue-monkey/
+- assets/games/rice-shop/
+- assets/games/diligent-bird/
+- assets/games/learning/
+- assets/games/special-hub/
+
+Cac pack duoc tao theo tung nhom de tai dan:
+1. rescue-monkey-assets.zip
+2. rice-shop-assets.zip
+3. diligent-bird-assets.zip
+4. learning-games-assets.zip
+5. special-hub-assets.zip
+
+Moi pack co PNG tach rieng, sprite sheet goc, manifest; Rescue Monkey co them demo CSS/JS animation.
+Sau khi zip xuat hien trong Downloads, giai nen vao thu muc tuong ung o tren.

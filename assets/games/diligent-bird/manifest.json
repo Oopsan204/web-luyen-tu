@@ -1,0 +1,35 @@
+{
+  "game": "diligent-bird",
+  "assets": [
+    "flap_1",
+    "flap_2",
+    "flap_3",
+    "glide",
+    "hit",
+    "victory",
+    "coin",
+    "star",
+    "heart",
+    "pipe_tall",
+    "pipe_short",
+    "clouds",
+    "gate_a",
+    "gate_b",
+    "gate_c",
+    "gate_d",
+    "score_badge"
+  ],
+  "animationSuggestions": {
+    "flap": {
+      "frames": [
+        "flap_1",
+        "flap_2",
+        "flap_3"
+      ],
+      "fps": 8
+    },
+    "hit": "shake+rotate",
+    "victory": "bob+scale",
+    "pipes": "translateX linear"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "component": "special-hub",
+  "assets": [
+    "mixed",
+    "translate",
+    "sentence",
+    "rice_shop",
+    "bird",
+    "rescue_monkey",
+    "gamepad_icon",
+    "chevron",
+    "badge_default",
+    "badge_new",
+    "badge_arcade",
+    "badge_prototype"
+  ]
+}

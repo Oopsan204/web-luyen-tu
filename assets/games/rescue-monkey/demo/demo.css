@@ -1,0 +1,19 @@
+
+:root{--dur:850ms}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(#9bd9ff,#eaf7ff);font-family:system-ui;overflow:hidden}
+.stage{height:100vh;position:relative;background:linear-gradient(#bfe9ff 0 65%,#eef8ff 65%);overflow:hidden}
+.ground{position:absolute;left:0;right:0;bottom:0;height:24%;background:linear-gradient(#eef7ff,#9ec7df)}
+.actor{position:absolute;bottom:13%;height:34vh;object-fit:contain;transform-origin:50% 90%;filter:drop-shadow(0 14px 12px #2455)}
+#milo{left:5%;animation:bob 1.8s ease-in-out infinite}#yeti{right:5%;height:43vh;animation:yetiStep 1.2s steps(2,end) infinite}
+.bomb{position:absolute;width:110px;left:23%;bottom:33%;opacity:0}
+.explosion{position:absolute;width:330px;right:13%;bottom:24%;opacity:0}
+.stage.attack .bomb{animation:bombFly var(--dur) cubic-bezier(.2,.7,.4,1) forwards}
+.stage.attack .explosion{animation:boom 500ms calc(var(--dur) - 120ms) ease-out forwards}
+.stage.attack #yeti{animation:knock 850ms calc(var(--dur) - 80ms) ease-out forwards}
+@keyframes bob{50%{transform:translateY(-12px) rotate(-1deg)}}
+@keyframes yetiStep{50%{transform:translateX(-15px)}}
+@keyframes bombFly{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:1;transform:translate(54vw,-8vh) rotate(520deg)}}
+@keyframes boom{0%{opacity:0;transform:scale(.25)}30%{opacity:1}100%{opacity:0;transform:scale(1.4)}}
+@keyframes knock{0%{transform:translateX(0) rotate(0)}45%{transform:translateX(13vw) rotate(13deg)}100%{transform:translateX(8vw) rotate(5deg)}}
+.controls{position:absolute;top:20px;left:50%;transform:translateX(-50%);background:#0e2946;color:white;padding:12px 18px;border-radius:20px;z-index:10}
+button{border:0;border-radius:12px;padding:10px 18px;font-weight:700;cursor:pointer}

@@ -1,0 +1,3 @@
+const s=document.querySelector('#stage'),m=document.querySelector('#milo'),y=document.querySelector('#yeti');
+document.querySelector('#attack').onclick=()=>{s.classList.remove('attack');void s.offsetWidth;m.src='../sprites/milo/throw.png';y.src='../sprites/yeti/hit.png';s.classList.add('attack');setTimeout(()=>m.src='../sprites/milo/idle.png',900);setTimeout(()=>y.src='../sprites/yeti/idle.png',1500)};
+document.querySelector('#reset').onclick=()=>{s.classList.remove('attack');m.src='../sprites/milo/idle.png';y.src='../sprites/yeti/idle.png'};

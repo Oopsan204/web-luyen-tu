@@ -1,0 +1,29 @@
+{
+  "games": [
+    "translate",
+    "sentence-builder"
+  ],
+  "assets": [
+    "robot_reading",
+    "robot_pointing",
+    "robot_happy",
+    "robot_tablet",
+    "notebook_closed",
+    "notebook_open",
+    "pencil",
+    "eraser",
+    "speech_hello_vi",
+    "sparkles_leaves",
+    "translation_panel",
+    "sentence_panel",
+    "word_tiles",
+    "success_badge",
+    "wrong_badge"
+  ],
+  "animationSuggestions": {
+    "robotPoint": "scale/bob",
+    "success": "pop+sparkle",
+    "wrong": "shake",
+    "wordTile": "drag transform"
+  }
+}
