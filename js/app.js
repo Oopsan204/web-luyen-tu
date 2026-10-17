@@ -379,6 +379,25 @@ function onHubFilterChange(target) {
 
 /* ---------- Phiên học dùng chung ---------- */
 const stageEl = () => document.querySelector("#immersive-study-stage") || document.querySelector("#study-stage");
+let studyTimerId = null;
+function startStudyTimer() {
+  if (studyTimerId) clearInterval(studyTimerId);
+  studyTimerId = setInterval(() => {
+    const s = studySession;
+    if (!s || !s.playing) {
+      clearInterval(studyTimerId);
+      studyTimerId = null;
+      return;
+    }
+    if (s.timerSec > 0) {
+      s.timerSec -= 1;
+      const secEl = document.querySelector(".study-hud-timer-sec");
+      if (secEl) secEl.textContent = `${s.timerSec}s`;
+      const badgeEl = document.querySelector(".study-timer-badge");
+      if (badgeEl && !badgeEl.textContent.includes("SRS")) badgeEl.textContent = `⏱ ${s.timerSec}S`;
+    }
+  }, 1000);
+}
 
 function setSiteShellInert(inert) {
   for (const selector of ["#app-shell", ".bottom-nav"]) {
@@ -391,6 +410,7 @@ function setSiteShellInert(inert) {
 }
 
 function stopSpecialGame() {
+  if (studyTimerId) { clearInterval(studyTimerId); studyTimerId = null; }
   if (activeSpecialGame === "bird") unmountDiligentBird();
   else if (activeSpecialGame === "rice_shop") unmountRiceShop();
   else if (activeSpecialGame === "translate" || activeSpecialGame === "sentence") unmountLearningGames();
@@ -501,8 +521,7 @@ async function launchSpecialGame(gameId) {
     return;
   }
   if (gameId === "mixed") {
-    startMode("mixed");
-    if (studySession) studySession.specialMode = "mixed";
+    startMode("mixed", { specialMode: "mixed" });
     return;
   }
   if (gameId === "bird") {
@@ -525,14 +544,44 @@ function openSpecialGames() {
 function sessionChrome() {
   const s = studySession;
   if (!s) return "";
-  return `<div class="session-bar">
-  <span class="session-chip">${escapeHTML(modeName(s.mode))}${s.srs ? " · SRS" : ""}</span>
-  <span class="session-chip">${escapeHTML(s.deckName)}</span>
-  <span class="session-chip" id="session-progress">${Math.min(s.index + 1, s.total)}/${s.total}</span>
-  <span class="session-chip" id="session-combo">Combo ${s.combo}</span>
-  <span class="session-chip coin" id="session-coins">● ${s.coins}</span>
-  <span class="session-chip" id="session-xp">⚡ ${s.xp}</span>
-  <button class="btn btn-small" data-action="end-session">Kết thúc</button></div>`;
+  const totalRounds = s.mode === "match" ? Math.max(1, Math.ceil(s.total / 8)) : s.total;
+  const currentRound = s.mode === "match" ? Math.min(Math.floor(s.index / 8) + 1, totalRounds) : Math.min(s.index + 1, s.total);
+  const roundPillText = s.mode === "match" ? `VÒNG ${currentRound}/${totalRounds}` : `CÂU ${Math.min(s.index + 1, s.total)}/${s.total}`;
+  const roundMatched = s.matched ? s.matched.length : 0;
+  const roundSize = s.matchCards ? s.matchCards.length : Math.min(8, s.total);
+  const totalMatched = s.totalMatchedCards || (s.mode === "match" ? roundMatched : s.correct);
+  const statusText = s.mode === "match"
+    ? `Đã ghép ${roundMatched} / ${roundSize} · tổng ${totalMatched}/${s.total}`
+    : `Đúng ${s.correct}/${s.total} · ${escapeHTML(s.deckName)}`;
+  const progressPct = Math.min(100, Math.round(((s.mode === "match" ? totalMatched : s.index) / Math.max(1, s.total)) * 100));
+  const timerSec = s.timerSec ?? 28;
+
+  return `<header class="study-game-hud">
+    <div class="study-hud-top">
+      <div class="study-hud-meta">
+        <span class="study-hud-round-pill">${roundPillText}</span>
+        <span class="study-hud-status">${statusText}</span>
+      </div>
+      <div class="study-hud-actions">
+        <button class="study-hud-btn" type="button" data-action="restart-current-mode">↻ Chơi lại</button>
+        <button class="study-hud-btn" type="button" data-action="exit-special-game">Thoát</button>
+      </div>
+    </div>
+    <div class="study-hud-bottom">
+      <span class="study-hud-coin">🪙 ~${s.coins} GAME</span>
+      <span class="study-hud-timer-sec">${timerSec}s</span>
+      <div class="study-hud-bar"><span class="study-hud-fill" style="width:${progressPct}%"></span></div>
+    </div>
+    <div class="session-bar" style="display:none;" aria-hidden="true">
+      <span class="session-chip">${escapeHTML(modeName(s.mode))}${s.srs ? " · SRS" : ""}</span>
+      <span class="session-chip">${escapeHTML(s.deckName)}</span>
+      <span class="session-chip" id="session-progress">${Math.min(s.index + 1, s.total)}/${s.total}</span>
+      <span class="session-chip" id="session-combo">Combo ${s.combo}</span>
+      <span class="session-chip coin" id="session-coins">● ${s.coins}</span>
+      <span class="session-chip" id="session-xp">⚡ ${s.xp}</span>
+      <button class="btn btn-small" data-action="end-session">Kết thúc</button>
+    </div>
+  </header>`;
 }
 
 function refreshChrome() {
@@ -546,6 +595,30 @@ function refreshChrome() {
   setText("session-combo", `Combo ${s.combo}`);
   setText("session-coins", `● ${s.coins}`);
   setText("session-xp", `⚡ ${s.xp}`);
+
+  const totalRounds = s.mode === "match" ? Math.max(1, Math.ceil(s.total / 8)) : s.total;
+  const currentRound = s.mode === "match" ? Math.min(Math.floor(s.index / 8) + 1, totalRounds) : Math.min(s.index + 1, s.total);
+  const roundPill = document.querySelector(".study-hud-round-pill");
+  if (roundPill) roundPill.textContent = s.mode === "match" ? `VÒNG ${currentRound}/${totalRounds}` : `CÂU ${Math.min(s.index + 1, s.total)}/${s.total}`;
+
+  const statusEl = document.querySelector(".study-hud-status");
+  if (statusEl) {
+    const roundMatched = s.matched ? s.matched.length : 0;
+    const roundSize = s.matchCards ? s.matchCards.length : Math.min(8, s.total);
+    const totalMatched = s.totalMatchedCards || (s.mode === "match" ? roundMatched : s.correct);
+    statusEl.textContent = s.mode === "match"
+      ? `Đã ghép ${roundMatched} / ${roundSize} · tổng ${totalMatched}/${s.total}`
+      : `Đúng ${s.correct}/${s.total} · ${s.deckName}`;
+  }
+  const coinEl = document.querySelector(".study-hud-coin");
+  if (coinEl) coinEl.textContent = `🪙 ~${s.coins} GAME`;
+
+  const fillEl = document.querySelector(".study-hud-fill");
+  if (fillEl) {
+    const totalMatched = s.totalMatchedCards || (s.mode === "match" ? (s.matched ? s.matched.length : 0) : s.index);
+    const progressPct = Math.min(100, Math.round((totalMatched / Math.max(1, s.total)) * 100));
+    fillEl.style.width = `${progressPct}%`;
+  }
 }
 
 function award(correct) {
@@ -583,7 +656,7 @@ function queueMixedRetry(card) {
 /* ---------- Rescue Monkey arena ---------- */
 const RM_START = 15;
 const rmVariant = () => (studySession?.mode === "mixed" ? studySession.plan?.[studySession.index] : studySession?.mode);
-const rmActive = () => ["quiz", "typing"].includes(rmVariant());
+const rmActive = () => studySession?.specialMode === "rescue_monkey" && ["quiz", "typing"].includes(rmVariant());
 
 function rmClear() {
   moduleRmClearTimers();
@@ -610,19 +683,30 @@ function rmPlay(correct, done) {
     },
   });
 }
-function startMode(mode, { srs = false, quiet = false } = {}) {
+function startMode(mode, { srs = false, quiet = false, specialMode = null } = {}) {
   const meta = modeMeta(mode);
-  if (!stageEl()) { location.hash = srs ? "#study?srs=1" : `#study?mode=${encodeURIComponent(meta.id)}`; return; }
   const cards = srs ? hubCards({ status: "due", limit: "all" }) : hubCards();
   if (!cards.length) {
     toast(srs ? "Không có từ nào đến hạn với bộ lọc hiện tại." : "Không có từ nào khớp bộ lọc. Đổi bộ lọc hoặc thêm từ mới.", "warn");
     return;
   }
+  if (!document.querySelector("#immersive-study-stage")) {
+    activeSpecialReturnHash = location.hash && !location.hash.includes("mode=") && !location.hash.includes("srs=") && !location.hash.includes("special=") ? location.hash : "#study";
+    immersiveGameShell(modeName(meta.id), meta.id, { studyStage: true });
+  } else {
+    const layer = document.querySelector("#immersive-game-layer");
+    if (layer) {
+      layer.className = `immersive-game-layer game-${meta.id}`;
+      layer.dataset.game = meta.id;
+      layer.setAttribute("aria-label", modeName(meta.id));
+    }
+  }
   const pool = mode === "mixed" ? shuffle(cards) : cards;
   const session = {
-    mode: meta.id, srs, quiet,
+    mode: meta.id, srs, quiet, specialMode,
     deckId: hubFilters.deckId, deckName: deckLabel(hubFilters.deckId),
     cards: pool, index: 0, total: pool.length, correct: 0, wrong: 0, combo: 0, xp: 0, coins: 0,
+    hearts: 5, timerSec: 28, totalMatchedCards: 0,
     startedAt: nowISO(), playing: true, revealed: false, picked: null, feedback: "",
     options: null, matched: [], matchTerms: null, matchMeanings: null, matchCards: null, selectedTerm: null, plan: null,
     retryQueued: false, distance: RM_START, animating: false,
@@ -631,6 +715,7 @@ function startMode(mode, { srs = false, quiet = false } = {}) {
     session.plan = buildMixedPlan(pool.length);
   }
   setSession(session);
+  startStudyTimer();
   renderCurrentCard();
 }
 
@@ -647,6 +732,7 @@ function nextCard() {
   s.matchCards = null;
   s.selectedTerm = null;
   s.retryQueued = false;
+  s.timerSec = 28;
   rmClear();
   s.animating = false;
   s.index += 1;
@@ -668,16 +754,28 @@ function renderCurrentCard() {
 function renderFlashcard() {
   const s = studySession;
   const card = s.cards[s.index];
-  stageEl().innerHTML = sessionChrome() + `<article class="card study-card flashcard-card">
-  <p class="eyebrow">${escapeHTML(deckLabel(card.deckId))}</p>
-  <h2>${escapeHTML(card.term)}</h2>
-  ${card.pronunciation ? `<small>${escapeHTML(card.pronunciation)}</small>` : ""}
-  ${card.example ? `<p class="example">${escapeHTML(card.example)}</p>` : ""}
-  <button class="btn btn-small btn-icon" data-action="speak" data-text="${escapeHTML(card.term)}" aria-label="Phát âm ${escapeHTML(card.term)}">♬</button>
-  ${s.revealed ? `<p class="answer"><strong>Nghĩa:</strong> ${escapeHTML(card.meaning)}</p>` : ""}
-  <div class="rating-row">${s.revealed
-    ? RATINGS.map(([rating, label]) => `<button class="btn" data-action="rate" data-rating="${rating}">${escapeHTML(label)}</button>`).join("")
-    : `<button class="btn btn-primary" data-action="reveal">Lật thẻ</button>`}</div>
+  const heartsCount = s.hearts ?? 5;
+  const heartsHTML = [1,2,3,4,5].map((i) => `<span class="study-heart ${i <= heartsCount ? '' : 'is-lost'}">❤️</span>`).join('');
+  const timerBadge = s.srs ? "SRS" : `⏱ ${(s.timerSec ?? 28)}S`;
+
+  stageEl().innerHTML = sessionChrome() + `<article class="study-game-board mode-flashcard study-card flashcard-card">
+  <div class="study-board-header">
+    <div class="study-hearts" aria-label="${heartsCount} lượt còn lại">${heartsHTML}</div>
+    <div class="study-timer-badge">${timerBadge}</div>
+  </div>
+  <div class="study-fc-body">
+    <p class="eyebrow" style="margin:0;">${escapeHTML(deckLabel(card.deckId))}</p>
+    <h2 class="study-fc-term">${escapeHTML(card.term)}</h2>
+    ${card.pronunciation ? `<p class="study-fc-pron">${escapeHTML(card.pronunciation)}</p>` : ""}
+    ${card.example ? `<p class="example" style="font-style:italic;color:#64748b;margin:4px 0;">${escapeHTML(card.example)}</p>` : ""}
+    <button class="btn btn-small btn-icon" data-action="speak" data-text="${escapeHTML(card.term)}" aria-label="Phát âm ${escapeHTML(card.term)}">♬</button>
+    ${s.revealed ? `<div class="study-fc-meaning answer"><strong>Nghĩa:</strong> ${escapeHTML(card.meaning)}</div>` : ""}
+  </div>
+  <div class="study-fc-actions rating-row">
+    ${s.revealed
+      ? RATINGS.map(([rating, label]) => `<button class="study-pill-btn btn" data-action="rate" data-rating="${rating}">${escapeHTML(label)}</button>`).join("")
+      : `<button class="btn btn-primary" style="min-width:180px;border-radius:999px;" data-action="reveal">Lật thẻ (Xem nghĩa)</button>`}
+  </div>
   </article>`;
   refreshChrome();
 }
@@ -713,17 +811,27 @@ function renderQuiz() {
   const s = studySession;
   const card = s.cards[s.index];
   if (!s.options) s.options = quizOptions(card);
-  stageEl().innerHTML = sessionChrome() + rmArenaHTML() + `<article class="card study-card quiz-card rm-host">
-  <p class="eyebrow">Chọn nghĩa đúng</p>
-  <h2>${escapeHTML(card.term)}</h2>
-  ${card.pronunciation ? `<small>${escapeHTML(card.pronunciation)}</small>` : ""}
-  <div class="option-grid">${s.options.map((option, index) => {
-    const answered = s.picked != null;
-    const cls = !answered ? "" : option === card.meaning ? " is-correct" : option === s.picked ? " is-wrong" : " is-muted";
-    return `<button class="option${cls}" data-action="pick-option" data-index="${index}" ${answered || s.animating ? "disabled" : ""}>${escapeHTML(option)}</button>`;
-  }).join("")}</div>
-  ${s.picked != null ? `<p class="answer">${s.picked === card.meaning ? "Chính xác!" : `Đáp án đúng: <strong>${escapeHTML(card.meaning)}</strong>`}</p>
-  <button class="btn btn-primary" data-action="next-card" ${s.animating ? "disabled" : ""}>Tiếp tục</button>` : ""}
+  const heartsCount = s.hearts ?? 5;
+  const heartsHTML = [1,2,3,4,5].map((i) => `<span class="study-heart ${i <= heartsCount ? '' : 'is-lost'}">❤️</span>`).join('');
+  const timerBadge = `⏱ ${(s.timerSec ?? 28)}S`;
+
+  stageEl().innerHTML = sessionChrome() + rmArenaHTML() + `<article class="study-game-board mode-quiz study-card quiz-card rm-host">
+  <div class="study-board-header">
+    <div class="study-hearts" aria-label="${heartsCount} lượt còn lại">${heartsHTML}</div>
+    <div class="study-timer-badge">${timerBadge}</div>
+  </div>
+  <div class="study-quiz-body">
+    <p class="eyebrow" style="margin:0;">Chọn nghĩa đúng</p>
+    <h2 class="study-quiz-term">${escapeHTML(card.term)}</h2>
+    ${card.pronunciation ? `<small class="study-fc-pron">${escapeHTML(card.pronunciation)}</small>` : ""}
+    <div class="study-quiz-options option-grid">${s.options.map((option, index) => {
+      const answered = s.picked != null;
+      const cls = !answered ? "" : option === card.meaning ? " is-correct" : option === s.picked ? " is-wrong" : " is-muted";
+      return `<button class="study-pill-btn option${cls}" data-action="pick-option" data-index="${index}" ${answered || s.animating ? "disabled" : ""}>${escapeHTML(option)}</button>`;
+    }).join("")}</div>
+    ${s.picked != null ? `<p class="answer" style="margin:8px 0 0;">${s.picked === card.meaning ? "🎉 Chính xác!" : `Đáp án đúng: <strong>${escapeHTML(card.meaning)}</strong>`}</p>
+    <div style="margin-top:8px;"><button class="btn btn-primary" data-action="next-card" ${s.animating ? "disabled" : ""}>Tiếp tục →</button></div>` : ""}
+  </div>
   </article>`;
   refreshChrome();
 }
@@ -739,6 +847,7 @@ async function pickOption(index) {
   s.animating = true;
   if (isCorrect) award(true);
   else {
+    if (s.hearts > 1) s.hearts -= 1;
     award(false);
     await markWrong(card);
     queueMixedRetry(card);
@@ -750,25 +859,44 @@ async function pickOption(index) {
 function renderMatch() {
   const s = studySession;
   if (!s.matchTerms) {
-    const size = s.mode === "mixed" ? 2 : Math.min(4, s.total);
+    const size = s.mode === "mixed" ? 2 : Math.min(8, s.total - s.index);
     s.matchCards = s.cards.slice(s.index, s.index + size);
     s.matchTerms = shuffle(s.matchCards.map((card) => ({ id: card.id, text: card.term })));
     s.matchMeanings = shuffle(s.matchCards.map((card) => ({ id: card.id, text: card.meaning })));
     s.selectedTerm = null;
   }
   const done = (id) => s.matched.includes(id);
-  stageEl().innerHTML = sessionChrome() + `<article class="card study-card match-card">
-  <p class="eyebrow">Nối từ với nghĩa</p>
-  <p class="match-hint">Chọn một từ rồi chọn nghĩa tương ứng. Cặp đúng bị khóa và không cộng điểm lần hai.</p>
-  <div class="match-columns">
-  <div class="match-column" role="group" aria-label="Cột từ vựng">${s.matchTerms.map((item) =>
-    `<button class="match-item${done(item.id) ? " is-done" : s.selectedTerm === item.id ? " is-selected" : ""}" data-action="match-term" data-id="${escapeHTML(item.id)}" ${done(item.id) ? "disabled" : ""}>${escapeHTML(item.text)}</button>`).join("")}</div>
-  <div class="match-column" role="group" aria-label="Cột nghĩa">${s.matchMeanings.map((item) =>
-    `<button class="match-item${done(item.id) ? " is-done" : ""}" data-action="match-meaning" data-id="${escapeHTML(item.id)}" ${done(item.id) ? "disabled" : ""}>${escapeHTML(item.text)}</button>`).join("")}</div>
+  const heartsCount = s.hearts ?? 5;
+  const heartsHTML = [1,2,3,4,5].map((i) => `<span class="study-heart ${i <= heartsCount ? '' : 'is-lost'}">❤️</span>`).join('');
+  const timerBadge = `⏱ ${(s.timerSec ?? 28)}S`;
+
+  stageEl().innerHTML = sessionChrome() + `<article class="study-game-board mode-match study-card match-card">
+  <div class="study-board-header">
+    <div class="study-hearts" aria-label="${heartsCount} lượt còn lại">${heartsHTML}</div>
+    <div class="study-timer-badge">${timerBadge}</div>
   </div>
-  ${s.feedback ? `<p class="answer">${escapeHTML(s.feedback)}</p>` : ""}
-  <p class="hub-count">Đã ghép ${s.matched.length}/${s.matchCards.length} cặp.</p>
-  ${s.matched.length === s.matchCards.length ? `<button class="btn btn-primary" data-action="advance-match">Tiếp tục</button>` : ""}
+  <div class="study-match-columns">
+    <div class="study-match-col" role="group" aria-label="Cột từ vựng">
+      <h3 class="study-col-title">Tiếng Anh</h3>
+      <div class="study-pill-list">
+        ${s.matchTerms.map((item) =>
+          `<button class="study-pill-btn match-item${done(item.id) ? " is-done" : s.selectedTerm === item.id ? " is-selected" : ""}" data-action="match-term" data-id="${escapeHTML(item.id)}" ${done(item.id) ? "disabled" : ""}>${escapeHTML(item.text)}</button>`
+        ).join("")}
+      </div>
+    </div>
+    <div class="study-match-col" role="group" aria-label="Cột nghĩa">
+      <h3 class="study-col-title">Tiếng Việt</h3>
+      <div class="study-pill-list">
+        ${s.matchMeanings.map((item) =>
+          `<button class="study-pill-btn match-item${done(item.id) ? " is-done" : ""}" data-action="match-meaning" data-id="${escapeHTML(item.id)}" ${done(item.id) ? "disabled" : ""}>${escapeHTML(item.text)}</button>`
+        ).join("")}
+      </div>
+    </div>
+  </div>
+  <footer class="study-board-footer">
+    <span class="study-match-count">Đã ghép: ${s.matched.length} / ${s.matchCards.length}</span>
+  </footer>
+  ${s.matched.length === s.matchCards.length ? `<div style="text-align:center;margin-top:6px;"><button class="btn btn-primary" data-action="advance-match">Tiếp tục →</button></div>` : ""}
   </article>`;
   refreshChrome();
 }
@@ -791,12 +919,21 @@ async function pickMatch(column, id) {
   if (!card) return;
   if (card.id === id) {
     s.matched.push(card.id);
+    s.totalMatchedCards = (s.totalMatchedCards || 0) + 1;
     s.feedback = `Đúng: ${card.term} = ${card.meaning}`;
     s.selectedTerm = null;
     award(true);
+    if (s.matched.length === s.matchCards.length) {
+      setTimeout(() => {
+        if (studySession && studySession.matched.length === studySession.matchCards?.length) {
+          advanceMatch();
+        }
+      }, 700);
+    }
   } else {
     s.feedback = "Chưa đúng, thử lại cặp khác nhé.";
     s.selectedTerm = null;
+    if (s.hearts > 1) s.hearts -= 1;
     award(false);
     await markWrong(card);
     queueMixedRetry(card);
@@ -807,8 +944,20 @@ async function pickMatch(column, id) {
 function advanceMatch() {
   const s = studySession;
   if (!s) return;
-  if (s.mode !== "mixed") s.index += (s.matchCards || []).length - 1;
-  nextCard();
+  if (s.mode !== "mixed") {
+    s.index += (s.matchCards || []).length;
+  }
+  if (s.index >= s.total) {
+    finishSession();
+  } else {
+    s.matched = [];
+    s.matchTerms = null;
+    s.matchMeanings = null;
+    s.matchCards = null;
+    s.selectedTerm = null;
+    s.timerSec = 28;
+    renderMatch();
+  }
 }
 
 function firstLetterHint(card) {
@@ -820,13 +969,23 @@ function renderTyping() {
   const s = studySession;
   const card = s.cards[s.index];
   const term = String(card.term || "");
-  stageEl().innerHTML = sessionChrome() + rmArenaHTML() + `<article class="card study-card typing-card rm-host">
-  <p class="eyebrow">Gõ từ vựng</p>
-  <h2>${escapeHTML(card.meaning)}</h2>
-  <p class="typing-hint">Chữ cái đầu: <strong>${escapeHTML(firstLetterHint(card))}</strong> · ${term.replace(/\s+/g, "").length} ký tự · không phân biệt hoa thường</p>
-  <form data-form="typing" class="typing-form"><label>Gõ từ đúng<input name="answer" autocomplete="off" placeholder="Nhập từ…" aria-label="Gõ từ đúng" ${s.animating ? "disabled" : ""}></label>
-  <div class="actions"><button class="btn btn-primary" type="submit" ${s.animating ? "disabled" : ""}>Chấm</button><button class="btn" type="button" data-action="skip-typing" ${s.animating ? "disabled" : ""}>Bỏ qua</button></div></form>
-  ${s.feedback ? `<p class="answer">${escapeHTML(s.feedback)}</p>` : ""}
+  const heartsCount = s.hearts ?? 5;
+  const heartsHTML = [1,2,3,4,5].map((i) => `<span class="study-heart ${i <= heartsCount ? '' : 'is-lost'}">❤️</span>`).join('');
+  const timerBadge = `⏱ ${(s.timerSec ?? 28)}S`;
+
+  stageEl().innerHTML = sessionChrome() + rmArenaHTML() + `<article class="study-game-board mode-typing study-card typing-card rm-host">
+  <div class="study-board-header">
+    <div class="study-hearts" aria-label="${heartsCount} lượt còn lại">${heartsHTML}</div>
+    <div class="study-timer-badge">${timerBadge}</div>
+  </div>
+  <div class="study-quiz-body">
+    <p class="eyebrow" style="margin:0;">Gõ từ vựng</p>
+    <h2 class="study-input-hero">${escapeHTML(card.meaning)}</h2>
+    <p class="typing-hint">Chữ cái đầu: <strong>${escapeHTML(firstLetterHint(card))}</strong> · ${term.replace(/\s+/g, "").length} ký tự · không phân biệt hoa thường</p>
+    <form data-form="typing" class="typing-form"><label><span class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;">Gõ từ đúng</span><input class="study-input-pill" name="answer" autocomplete="off" placeholder="Nhập từ tiếng Anh…" aria-label="Gõ từ đúng" ${s.animating ? "disabled" : ""} autofocus></label>
+    <div class="actions" style="justify-content:center;margin-top:10px;"><button class="btn btn-primary" type="submit" ${s.animating ? "disabled" : ""}>Chấm</button><button class="btn" type="button" data-action="skip-typing" ${s.animating ? "disabled" : ""}>Bỏ qua</button></div></form>
+    ${s.feedback ? `<p class="answer" style="margin-top:8px;">${escapeHTML(s.feedback)}</p>` : ""}
+  </div>
   </article>`;
   refreshChrome();
 }
@@ -841,6 +1000,7 @@ async function checkTyping(answer) {
     renderTyping();
     rmPlay(true, () => { if (studySession) nextCard(); });
   } else {
+    if (s.hearts > 1) s.hearts -= 1;
     award(false);
     await markWrong(card);
     queueMixedRetry(card);
@@ -863,19 +1023,29 @@ function renderListening() {
   const s = studySession;
   const card = s.cards[s.index];
   const supported = speechSupported();
-  stageEl().innerHTML = sessionChrome() + `<article class="card study-card listening-card">
-  <p class="eyebrow">Nghe viết</p>
-  <h2>Nghe và gõ lại từ</h2>
-  <p class="typing-hint">Số ký tự: ${String(card.term || "").replace(/\s+/g, "").length} · chữ cái đầu: <strong>${escapeHTML(firstLetterHint(card))}</strong></p>
-  ${supported ? `<div class="actions listen-actions">
-  <button class="btn" data-action="listen-play" data-rate="1">Nghe</button>
-  <button class="btn btn-small" data-action="listen-play" data-rate="0.7">Nghe lại 0.7x</button>
-  <button class="btn btn-small" data-action="listen-play" data-rate="1">Nghe lại 1x</button></div>`
-  : `<p class="answer warn">Trình duyệt chưa hỗ trợ giọng nói (SpeechSynthesis). Bạn vẫn thấy nghĩa và có thể gõ từ để học tiếp.</p>
-  <p class="typing-hint">Nghĩa: <strong>${escapeHTML(card.meaning)}</strong></p>`}
-  <form data-form="listening" class="typing-form"><label>Gõ từ bạn nghe<input name="answer" autocomplete="off" placeholder="Nhập từ…" aria-label="Gõ từ đã nghe"></label>
-  <div class="actions"><button class="btn btn-primary" type="submit">Chấm</button><button class="btn" type="button" data-action="skip-typing">Bỏ qua</button></div></form>
-  ${s.feedback ? `<p class="answer">${escapeHTML(s.feedback)}</p>` : ""}
+  const heartsCount = s.hearts ?? 5;
+  const heartsHTML = [1,2,3,4,5].map((i) => `<span class="study-heart ${i <= heartsCount ? '' : 'is-lost'}">❤️</span>`).join('');
+  const timerBadge = `⏱ ${(s.timerSec ?? 28)}S`;
+
+  stageEl().innerHTML = sessionChrome() + `<article class="study-game-board mode-listening study-card listening-card">
+  <div class="study-board-header">
+    <div class="study-hearts" aria-label="${heartsCount} lượt còn lại">${heartsHTML}</div>
+    <div class="study-timer-badge">${timerBadge}</div>
+  </div>
+  <div class="study-quiz-body">
+    <p class="eyebrow" style="margin:0;">Nghe viết</p>
+    <h2 class="study-input-hero">Nghe và gõ lại từ</h2>
+    <p class="typing-hint">Số ký tự: ${String(card.term || "").replace(/\s+/g, "").length} · chữ cái đầu: <strong>${escapeHTML(firstLetterHint(card))}</strong></p>
+    ${supported ? `<div class="actions listen-actions" style="justify-content:center;margin:6px 0 12px;">
+    <button class="btn" data-action="listen-play" data-rate="1">🔊 Nghe</button>
+    <button class="btn btn-small" data-action="listen-play" data-rate="0.7">0.7x Chậm</button>
+    <button class="btn btn-small" data-action="listen-play" data-rate="1">1x Chuẩn</button></div>`
+    : `<p class="answer warn">Trình duyệt chưa hỗ trợ giọng nói (SpeechSynthesis). Bạn vẫn thấy nghĩa và có thể gõ từ để học tiếp.</p>
+    <p class="typing-hint">Nghĩa: <strong>${escapeHTML(card.meaning)}</strong></p>`}
+    <form data-form="listening" class="typing-form"><label><span class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;">Gõ từ bạn nghe</span><input class="study-input-pill" name="answer" autocomplete="off" placeholder="Gõ từ bạn nghe…" aria-label="Gõ từ đã nghe" autofocus></label>
+    <div class="actions" style="justify-content:center;margin-top:10px;"><button class="btn btn-primary" type="submit">Chấm</button><button class="btn" type="button" data-action="skip-typing">Bỏ qua</button></div></form>
+    ${s.feedback ? `<p class="answer" style="margin-top:8px;">${escapeHTML(s.feedback)}</p>` : ""}
+  </div>
   </article>`;
   refreshChrome();
   if (supported && !s.feedback) playPrompt(card);
@@ -889,6 +1059,7 @@ async function checkListening(answer) {
     award(true);
     nextCard();
   } else {
+    if (s.hearts > 1) s.hearts -= 1;
     award(false);
     await markWrong(card);
     queueMixedRetry(card);
@@ -901,14 +1072,16 @@ async function checkListening(answer) {
 }
 
 async function finishSession() {
+  clearInterval(studyTimerId);
+  studyTimerId = null;
   rmClear();
   const s = studySession;
   if (!s) return;
   const total = s.total;
-  const correct = s.correct;
+  const correct = s.mode === "match" ? (s.totalMatchedCards || s.correct) : s.correct;
   const wrong = s.wrong;
   const attempts = correct + wrong;
-  const accuracy = attempts ? Math.round((correct / attempts) * 100) : 0;
+  const accuracy = attempts ? Math.round((correct / attempts) * 100) : total ? Math.round((correct / total) * 100) : 100;
   const duration = Math.max(1, Math.round((Date.now() - new Date(s.startedAt).getTime()) / 1000));
   const activityMode = s.specialMode || s.mode;
   const record = await saveActivity({
@@ -920,13 +1093,18 @@ async function finishSession() {
   await reload(false);
   setSession({ ...s, playing: false });
   if (stageEl()) {
-    stageEl().innerHTML = `<article class="card study-card result-card">
-    <p class="eyebrow">Kết quả phiên học</p>
-    <h2>${escapeHTML(modeName(activityMode))}${s.specialMode && s.mode !== activityMode ? ` · ${escapeHTML(modeName(s.mode))}` : ""} · ${correct}/${total} đúng (${accuracy}%)</h2>
-    <p>Bộ ${escapeHTML(s.deckName)} · ${escapeHTML(fmtDuration(duration))} · +${s.xp} XP · +${s.coins} coin.</p>
-    <div class="actions">${s.specialMode
-      ? `<button class="btn btn-primary" type="button" data-action="restart-special-session" data-game="${escapeHTML(activityMode)}" data-mode="${escapeHTML(s.mode)}">↻ Chơi lại</button><button class="btn" type="button" data-action="exit-special-game">Thoát về trung tâm</button>`
-      : `<a class="btn btn-primary" href="#study">Học tiếp</a><a class="btn" href="#stats">Xem thống kê</a>`}</div></article>`;
+    stageEl().innerHTML = `<article class="study-game-board mode-result study-card result-card">
+    <div class="study-result-badge">🏆</div>
+    <p class="eyebrow" style="margin:0;">Hoàn thành phiên học</p>
+    <h2 style="margin:4px 0 8px;font-size:clamp(1.8rem,4vw,2.4rem);color:#1e1b4b;">${escapeHTML(modeName(activityMode))}${s.specialMode && s.mode !== activityMode ? ` · ${escapeHTML(modeName(s.mode))}` : ""}</h2>
+    <p style="font-size:18px;font-weight:750;color:#0f172a;margin:4px 0 8px;">${correct}/${total} đúng (${accuracy}%)</p>
+    <p style="color:#64748b;margin:0 0 16px;">Bộ ${escapeHTML(s.deckName)} · ${escapeHTML(fmtDuration(duration))} · +${s.xp} XP · +${s.coins} coin.</p>
+    <div class="study-result-actions actions">
+      ${s.specialMode
+        ? `<button class="btn btn-primary" type="button" data-action="restart-special-session" data-game="${escapeHTML(activityMode)}" data-mode="${escapeHTML(s.mode)}" style="border-radius:999px;padding:10px 22px;">↻ Chơi lại</button><button class="btn" type="button" data-action="exit-special-game" style="border-radius:999px;padding:10px 22px;">Thoát về trung tâm</button>`
+        : `<button class="btn btn-primary" type="button" data-action="restart-current-mode" style="border-radius:999px;padding:10px 22px;">↻ Chơi lại</button><button class="btn" type="button" data-action="exit-special-game" style="border-radius:999px;padding:10px 22px;">Thoát về trung tâm</button><button class="btn" type="button" data-action="goto-stats" style="border-radius:999px;padding:10px 22px;">Xem thống kê</button>`
+      }
+    </div></article>`;
   }
   activeSpecialGame = null;
   activeSpecialStartedAt = 0;
@@ -1119,11 +1297,9 @@ async function handleAction(action, target) {
     activeSpecialGame = game;
     activeSpecialStartedAt = Date.now();
     if (game === "rescue_monkey") {
-      startMode(mode === "typing" ? "typing" : "quiz");
-      if (studySession) studySession.specialMode = "rescue_monkey";
+      startMode(mode === "typing" ? "typing" : "quiz", { specialMode: "rescue_monkey" });
     } else if (game === "mixed") {
-      startMode("mixed");
-      if (studySession) studySession.specialMode = "mixed";
+      startMode("mixed", { specialMode: "mixed" });
     }
     return;
   }
@@ -1133,24 +1309,37 @@ async function handleAction(action, target) {
     const immersiveStage = document.querySelector("#immersive-study-stage");
     if (!immersiveStage) return;
     immersiveStage.innerHTML = "";
-    startMode(mode);
-    if (studySession) {
-      studySession.specialMode = "rescue_monkey";
-      activeSpecialGame = "rescue_monkey";
-      activeSpecialStartedAt = Date.now();
-    }
+    activeSpecialGame = "rescue_monkey";
+    activeSpecialStartedAt = Date.now();
+    startMode(mode, { specialMode: "rescue_monkey" });
+    return;
+  }
+  if (action === "restart-current-mode") {
+    const s = studySession;
+    const mode = s?.mode || "match";
+    const srs = Boolean(s?.srs);
+    return startMode(mode, { srs });
+  }
+  if (action === "goto-stats") {
+    stopSpecialGame();
+    rmClear();
+    setSession(null);
+    history.replaceState(null, "", "#stats");
+    renderRoute();
     return;
   }
   if (action === "exit-special-game") {
     const wasImmersive = Boolean(activeSpecialLayer);
     const returnHash = activeSpecialReturnHash || "#study";
+    const specialIds = ["bird", "rice_shop", "translate", "sentence", "rescue_monkey", "mixed"];
+    const wasSpecial = activeSpecialGame && specialIds.includes(activeSpecialGame);
     stopSpecialGame();
     rmClear();
-    if (studySession?.specialMode) setSession(null);
+    setSession(null);
     if (wasImmersive) {
       history.replaceState(null, "", returnHash);
       renderRoute();
-      openSpecialGames();
+      if (wasSpecial) openSpecialGames();
     } else {
       renderStudyEntry(new URLSearchParams());
     }

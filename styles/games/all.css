@@ -140,6 +140,13 @@ body.rice-shop-immersive > .bottom-nav {
 @media (prefers-reduced-motion: reduce) {
   .immersive-game-exit { transition: none; }
 }
+.game-flashcard .immersive-game-exit,
+.game-quiz .immersive-game-exit,
+.game-match .immersive-game-exit,
+.game-typing .immersive-game-exit,
+.game-listening .immersive-game-exit {
+  display: none !important;
+}
 
 /* Shared fullscreen behavior for every special game */
 body.special-game-immersive {
@@ -213,6 +220,371 @@ body.special-game-immersive > .bottom-nav {
     radial-gradient(circle at 15% 10%, rgba(255,255,255,.85), transparent 28%),
     linear-gradient(145deg, #f4efff, #eef7ff 55%, #fff7e9);
 }
+.immersive-game-layer.game-flashcard {
+  background:
+    radial-gradient(circle at 15% 15%, rgba(255,255,255,.9), transparent 30%),
+    radial-gradient(circle at 85% 80%, rgba(196,181,253,.4), transparent 40%),
+    linear-gradient(145deg, #ede9fe 0%, #f5f3ff 45%, #e0e7ff 100%);
+}
+.immersive-game-layer.game-quiz {
+  background:
+    radial-gradient(circle at 15% 15%, rgba(255,255,255,.9), transparent 30%),
+    radial-gradient(circle at 85% 80%, rgba(254,215,170,.45), transparent 40%),
+    linear-gradient(145deg, #fff7ed 0%, #fffbf5 45%, #ffedd5 100%);
+}
+.immersive-game-layer.game-match {
+  background:
+    radial-gradient(circle at 15% 15%, rgba(255,255,255,.95), transparent 30%),
+    radial-gradient(circle at 85% 80%, rgba(186,230,253,.45), transparent 40%),
+    linear-gradient(145deg, #f0f7ff 0%, #f8fbff 45%, #e6f0fa 100%);
+}
+.immersive-game-layer.game-typing {
+  background:
+    radial-gradient(circle at 15% 15%, rgba(255,255,255,.9), transparent 30%),
+    radial-gradient(circle at 85% 80%, rgba(167,243,208,.45), transparent 40%),
+    linear-gradient(145deg, #ecfdf5 0%, #f7fdfa 45%, #d1fae5 100%);
+}
+.immersive-game-layer.game-listening {
+  background:
+    radial-gradient(circle at 15% 15%, rgba(255,255,255,.9), transparent 30%),
+    radial-gradient(circle at 85% 80%, rgba(165,243,252,.45), transparent 40%),
+    linear-gradient(145deg, #ecfeff 0%, #f7fdfe 45%, #cffafe 100%);
+}
+.game-flashcard .immersive-study-stage,
+.game-quiz .immersive-study-stage,
+.game-match .immersive-study-stage,
+.game-typing .immersive-study-stage,
+.game-listening .immersive-study-stage {
+  display: grid;
+  align-content: center;
+  gap: 14px;
+}
+.study-game-hud {
+  width: min(720px, 100%);
+  margin: 0 auto 12px;
+  background: #ffffff;
+  border: 2px solid #111827;
+  border-radius: 20px;
+  padding: 10px 18px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.study-hud-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.study-hud-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+.study-hud-round-pill {
+  background: #f3e8ff;
+  color: #7e22ce;
+  padding: 3px 11px;
+  border-radius: 999px;
+  font-weight: 850;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.study-hud-status {
+  font-weight: 700;
+  color: #334155;
+  font-size: 14px;
+}
+.study-hud-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.study-hud-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: #0284c7;
+  font-weight: 750;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+.study-hud-btn:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+.study-hud-bottom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.study-hud-coin {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fef9c3;
+  color: #854d0e;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.study-hud-timer-sec {
+  font-weight: 750;
+  font-size: 13px;
+  color: #16a34a;
+  min-width: 30px;
+}
+.study-hud-bar {
+  flex: 1;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.study-hud-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  transition: width 0.3s ease;
+}
+.study-game-board {
+  width: min(720px, 100%);
+  margin: 0 auto;
+  background: #ffffff;
+  border-radius: 28px;
+  padding: 22px 28px;
+  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.study-board-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.study-hearts {
+  display: flex;
+  gap: 4px;
+  font-size: 19px;
+  line-height: 1;
+}
+.study-heart.is-lost {
+  opacity: 0.25;
+  filter: grayscale(1);
+}
+.study-timer-badge {
+  background: #dcfce7;
+  color: #15803d;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.study-match-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.study-match-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.study-col-title {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0 0 6px;
+}
+.study-pill-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.study-pill-btn {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 14.5px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  line-height: 1.35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.study-pill-btn:hover:not(:disabled) {
+  border-color: #94a3b8;
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+.study-pill-btn.is-selected {
+  border-color: #3b82f6 !important;
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+}
+.study-pill-btn.is-done {
+  border-color: #86efac !important;
+  background: #f0fdf4 !important;
+  color: #166534 !important;
+  opacity: 0.72;
+  cursor: default;
+  transform: none !important;
+}
+.study-pill-btn.is-wrong {
+  border-color: #fca5a5 !important;
+  background: #fef2f2 !important;
+  color: #991b1b !important;
+  animation: pillShake 0.3s ease;
+}
+@keyframes pillShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.study-board-footer {
+  text-align: center;
+  font-weight: 800;
+  font-size: 14px;
+  color: #1e293b;
+  margin-top: 6px;
+}
+.study-game-board.mode-flashcard {
+  text-align: center;
+  min-height: 380px;
+  justify-content: space-between;
+}
+.study-fc-body {
+  display: grid;
+  gap: 12px;
+  margin: 18px 0;
+  justify-items: center;
+}
+.study-fc-term {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 850;
+  color: #1e1b4b;
+  margin: 0;
+}
+.study-fc-pron {
+  font-size: 17px;
+  color: #6366f1;
+  font-weight: 600;
+}
+.study-fc-meaning {
+  background: #f5f3ff;
+  border: 1.5px solid #ddd6fe;
+  padding: 14px 20px;
+  border-radius: 16px;
+  font-size: 20px;
+  font-weight: 750;
+  color: #4c1d95;
+  width: 100%;
+  max-width: 480px;
+}
+.study-fc-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.study-fc-actions .study-pill-btn {
+  max-width: 140px;
+}
+.study-game-board.mode-quiz {
+  min-height: 380px;
+}
+.study-quiz-body {
+  display: grid;
+  gap: 14px;
+  text-align: center;
+  margin: 12px 0;
+}
+.study-quiz-term {
+  font-size: clamp(1.8rem, 4.5vw, 2.6rem);
+  font-weight: 850;
+  color: #7c2d12;
+  margin: 0;
+}
+.study-quiz-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 10px;
+}
+.study-quiz-options .study-pill-btn {
+  min-height: 52px;
+  font-size: 15.5px;
+}
+.study-game-board.mode-typing,
+.study-game-board.mode-listening {
+  min-height: 360px;
+  text-align: center;
+}
+.study-input-hero {
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  font-weight: 850;
+  color: #064e3b;
+  margin: 8px 0;
+}
+.study-input-pill {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  border-radius: 999px;
+  border: 2px solid #cbd5e1;
+  padding: 12px 22px;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.study-input-pill:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+.study-game-board.mode-result {
+  text-align: center;
+  padding: 36px 28px;
+  align-items: center;
+}
+.study-result-badge {
+  font-size: 64px;
+  line-height: 1;
+}
+.study-result-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
 .immersive-study-stage {
   padding: max(66px, calc(var(--game-safe-top) + 50px)) clamp(18px, 5vw, 72px) var(--game-safe-bottom);
   overflow: auto;
@@ -305,7 +677,15 @@ body.special-game-immersive > .bottom-nav {
   .immersive-mode-grid { grid-template-columns: 1fr; }
   .immersive-mode-option { min-height: 112px; }
   .game-rescue_monkey .rm-arena { height: 220px; border-radius: 18px; }
+  .study-game-hud { padding: 8px 12px; border-radius: 16px; margin-bottom: 8px; }
+  .study-game-board { padding: 16px 12px; border-radius: 20px; gap: 10px; }
+  .study-match-columns { gap: 8px; }
+  .study-pill-btn { padding: 8px 10px; font-size: 13px; min-height: 38px; }
+  .study-quiz-options { grid-template-columns: 1fr; }
+  .study-board-header { margin-bottom: 2px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .immersive-mode-option { transition: none; }
+  .study-pill-btn,
+  .study-hud-fill { transition: none; animation: none; }
 }
