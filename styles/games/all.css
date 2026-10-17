@@ -53,3 +53,13 @@
 .special-stage-shell.is-rice-shop { width:100%; max-width:none; }
 .special-stage-shell.is-rice-shop .special-stage-toolbar { margin-bottom:10px; }
 .special-stage-shell.is-rice-shop #special-game-root { width:100%; }
+
+body.rice-shop-immersive .sidebar,
+body.rice-shop-immersive .topbar,
+body.rice-shop-immersive .bottom-nav { display:none !important; }
+body.rice-shop-immersive .app-shell,
+body.rice-shop-immersive .app-shell.collapsed { grid-template-columns:1fr !important; }
+body.rice-shop-immersive .main-column { grid-column:1 !important; }
+body.rice-shop-immersive .view { max-width:none !important; padding:10px 12px 24px !important; }
+body.rice-shop-immersive .special-stage-shell.is-rice-shop { max-width:1320px; margin:0 auto; }
+body.rice-shop-immersive .special-stage-toolbar { max-width:1320px; margin:0 auto 10px; }

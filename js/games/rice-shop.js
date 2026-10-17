@@ -236,7 +236,7 @@ function canOpenShop(stock = {}) {
 
 function addStarterStock() {
   if (!runtime) return;
-  const target = { com: 5, ga: 5, cucumber: 5, nuoc_mam: 5 };
+  const target = { com: 5, ga: 5, cucumber: 5, nuoc_mam: 5, drink: 4 };
   for (const [id, wanted] of Object.entries(target)) {
     while ((runtime.inventory.stock[id] || 0) < wanted) {
       const result = buyIngredient(runtime.inventory, id, 1);
@@ -433,6 +433,7 @@ function renderPlate(day) {
       <img src="${item.img}" alt=""><span>${escapeHTML(item.name)}</span><span class="rs-item-qty">x${runtime.inventory.stock[item.id]}</span>
     </button>`).join("");
   const canUpsell = (runtime.inventory.stock.drink || 0) > 0 && !day.picked.includes("drink");
+  const hasFoodPick = day.picked.some((id) => id !== "drink");
   return `
   <section class="rs-kitchen">
     <div class="rs-kitchen-worktop">
@@ -464,7 +465,7 @@ function renderPlate(day) {
     </div>
     <div class="rs-plate-actions">
       <button type="button" class="rs-btn" data-rs="reset-plate" ${day.picked.length && day.accuracy === null ? "" : "disabled"}>↺ Làm lại đĩa</button>
-      <button type="button" class="rs-btn rs-btn-primary rs-serve-btn" data-rs="serve" ${day.picked.length && day.answered ? "" : "disabled"}>GIAO MÓN →</button>
+      <button type="button" class="rs-btn rs-btn-primary rs-serve-btn" data-rs="serve" ${hasFoodPick && day.answered ? "" : "disabled"}>GIAO MÓN →</button>
     </div>
   </section>`;
 }
@@ -684,7 +685,7 @@ function servePlate() {
   const foodPicked = day.picked.filter((id) => id !== "drink");
   const result = plateAccuracy(dish.recipe, foodPicked);
   day.accuracy = Number(result.accuracy.toFixed(2));
-  day.served = day.picked.length > 0;
+  day.served = foodPicked.length > 0;
   stopPatience();
   if (day.accuracy === 1) day.patience = applyPatience(day.patience, "served", runtime.rules);
   const price = day.served ? orderPrice(dish, day.picked.includes("drink")) : 0;
