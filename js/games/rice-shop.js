@@ -542,7 +542,11 @@ function renderReport() {
     </ul>
     <div class="rs-stars" aria-label="${summary.stars} sao">${[1, 2, 3, 4, 5].map((n) => `<i class="${n <= summary.stars ? "on" : ""}"></i>`).join("")}</div>
     <img class="rs-art rs-rating" src="${RS_ASSETS.ui.rating}" alt="Bảng đánh giá">
-    <button type="button" class="rs-btn rs-btn-primary" data-rs="finish">Xong</button>
+    <p class="rs-report-note">${summary.served + summary.lost >= DAY_CUSTOMERS ? "Đã hoàn thành đủ 5 khách trong ngày." : "Ngày bán kết thúc sớm."}</p>
+    <div class="rs-report-actions">
+      <button type="button" class="rs-btn" data-rs="restart">↻ Chơi lại</button>
+      <button type="button" class="rs-btn rs-btn-primary" data-action="exit-special-game">Thoát về trung tâm</button>
+    </div>
   </section>`;
 }
 
@@ -600,8 +604,13 @@ function startPatience() {
     const fill = runtime.container?.querySelector(".rs-patience-fill");
     if (fill) fill.style.width = `${Math.round(day.patience * 100)}%`;
     const clock = runtime.container?.querySelector("[data-rs='clock']");
-    if (clock) clock.textContent = formatClock(remainingDaySeconds());
+    const remaining = remainingDaySeconds();
+    if (clock) clock.textContent = formatClock(remaining);
     runtime.container?.querySelector(".rs-day")?.classList.toggle("rs-phase-angry", patienceState(day.patience) === "angry");
+    if (remaining <= 0) {
+      endDay();
+      return;
+    }
     if (day.patience <= 0) customerLeft();
   }, 200);
 }
@@ -710,10 +719,14 @@ function servePlate() {
 }
 
 function endDay() {
+  if (!runtime || runtime.phase === "report" || runtime.finishedNotified) return;
   stopPatience();
+  runtime.timers.forEach((id) => clearTimeout(id));
+  runtime.timers.clear();
   const summary = settleDay(runtime.day.records, { spent: runtime.prepSpent + runtime.penalties });
   runtime.summary = summary;
   runtime.phase = "report";
+  runtime.finishedNotified = true;
   paint();
   runtime.onFinish?.(summary);
 }
@@ -763,9 +776,6 @@ function onEvent(event) {
   } else if (action === "serve") {
     event.preventDefault();
     servePlate();
-  } else if (action === "finish") {
-    runtime.phase = "done";
-    paint();
   }
 }
 
@@ -801,6 +811,7 @@ export function mountRiceShop(containerEl, { cards = [], onFinish, onScore, rand
     customers: Object.values(RS_ASSETS.customers),
     phase: "tutorial",
     summary: null,
+    finishedNotified: false,
   };
   riceShopState.mounted = true;
   riceShopState.container = containerEl;
@@ -821,6 +832,7 @@ export function startRiceShop() {
   runtime.inventory = { budget: START_BUDGET, stock: {} };
   runtime.day = freshDay();
   runtime.summary = null;
+  runtime.finishedNotified = false;
   runtime.phase = "tutorial";
   riceShopState.running = true;
   paint();

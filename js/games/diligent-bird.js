@@ -253,7 +253,19 @@ export function mountDiligentBird(containerEl, options = {}) {
   };
   state.onKey = (event) => birdKey(state, event);
   state.onClick = (event) => {
-    const gate = event.target instanceof Element ? event.target.closest(".dbird-gate") : null;
+    const target = event.target instanceof Element ? event.target : null;
+    const restart = target?.closest("[data-dbird-restart]");
+    if (restart) {
+      const container = state.container;
+      const cards = state.pool;
+      const options = state.sessionOptions;
+      const onFinish = state.onFinish;
+      const onScore = state.onScore;
+      mountDiligentBird(container, { cards, hearts: options.hearts, limit: options.limit, random: options.random, onFinish, onScore });
+      startDiligentBird();
+      return;
+    }
+    const gate = target?.closest(".dbird-gate");
     if (gate) birdChoose(state, Number(gate.dataset.index));
   };
   root.addEventListener("click", state.onClick);
@@ -411,6 +423,10 @@ function birdFinish(state, result) {
   state.els.status.textContent = summary.reason === "hearts"
     ? `Hết mạng. Điểm ${summary.score}, đúng ${summary.correct}/${summary.answered}.`
     : `Hoàn thành! Điểm ${summary.score}, đúng ${summary.correct}/${summary.total}.`;
+  const finish = document.createElement("div");
+  finish.className = "dbird-finish";
+  finish.innerHTML = `<div><strong>${summary.reason === "hearts" ? "Hết mạng" : "Hoàn thành!"}</strong><span>Điểm ${summary.score} · Đúng ${summary.correct}/${summary.answered || summary.total}</span><button type="button" data-dbird-restart>↻ Chơi lại</button></div>`;
+  state.root.append(finish);
   birdFloat(state, `★ ${summary.score}`);
   birdLater(state, () => state.onFinish?.(summary, result), 700);
 }

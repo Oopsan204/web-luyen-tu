@@ -205,3 +205,64 @@ export function filterStudyCards(cards = [], filters = {}, now = new Date(), ran
   const wanted = Number.parseInt(limit, 10);
   return Number.isFinite(wanted) && wanted >= 0 ? list.slice(0, wanted) : list;
 }
+
+export const MIXED_MODE_WEIGHTS = Object.freeze({
+  quiz: 0.30,
+  typing: 0.30,
+  listening: 0.20,
+  flashcard: 0.10,
+  match: 0.10,
+});
+
+export function buildMixedPlan(length, random = Math.random, weights = MIXED_MODE_WEIGHTS) {
+  const total = Math.max(0, Math.floor(Number(length) || 0));
+  if (!total) return [];
+  const modes = Object.keys(weights).filter((mode) => Number(weights[mode]) > 0);
+  if (!modes.length) return [];
+  const dice = typeof random === "function" ? random : Math.random;
+  const raw = modes.map((mode, order) => {
+    const exact = total * Number(weights[mode]);
+    return { mode, order, exact, count: Math.floor(exact), frac: exact - Math.floor(exact) };
+  });
+  let assigned = raw.reduce((sum, item) => sum + item.count, 0);
+  [...raw]
+    .sort((a, b) => b.frac - a.frac || a.order - b.order)
+    .slice(0, Math.max(0, total - assigned))
+    .forEach((item) => { item.count += 1; assigned += 1; });
+
+  const remaining = Object.fromEntries(raw.map(({ mode, count }) => [mode, count]));
+  const plan = [];
+  let previous = null;
+  while (plan.length < total) {
+    let candidates = modes.filter((mode) => remaining[mode] > 0 && mode !== previous);
+    if (!candidates.length) candidates = modes.filter((mode) => remaining[mode] > 0);
+    const pool = candidates.reduce((sum, mode) => sum + remaining[mode], 0);
+    let roll = Math.min(0.999999999, Math.max(0, Number(dice()) || 0)) * pool;
+    let selected = candidates[0];
+    for (const mode of candidates) {
+      roll -= remaining[mode];
+      if (roll < 0) { selected = mode; break; }
+    }
+    plan.push(selected);
+    remaining[selected] -= 1;
+    previous = selected;
+  }
+  return plan;
+}
+
+export function pickMixedVariant(previous = null, random = Math.random, weights = MIXED_MODE_WEIGHTS) {
+  const dice = typeof random === "function" ? random : Math.random;
+  let candidates = Object.entries(weights)
+    .filter(([mode, weight]) => Number(weight) > 0 && mode !== previous);
+  if (!candidates.length) {
+    candidates = Object.entries(weights).filter(([, weight]) => Number(weight) > 0);
+  }
+  const total = candidates.reduce((sum, [, weight]) => sum + Number(weight), 0);
+  if (!total) return "quiz";
+  let roll = Math.min(0.999999999, Math.max(0, Number(dice()) || 0)) * total;
+  for (const [mode, weight] of candidates) {
+    roll -= Number(weight);
+    if (roll < 0) return mode;
+  }
+  return candidates[candidates.length - 1][0];
+}

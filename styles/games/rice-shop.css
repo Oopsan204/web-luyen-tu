@@ -216,3 +216,18 @@
   .rs-customer-main>.rs-sprite,.rs-tutorial-owner,.rs-pop,.rs-sparkle{animation:none!important}
   .rs-game-progress i,.rs-patience-fill,.rs-btn{transition:none!important}
 }
+
+.rs-report-note {
+  margin: 0;
+  color: #735c45;
+  font-weight: 700;
+}
+.rs-report-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.immersive-game-layer.game-rice_shop .rs-report-actions .rs-btn {
+  min-width: 150px;
+}

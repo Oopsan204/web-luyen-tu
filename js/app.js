@@ -1,4 +1,4 @@
-import { calculateSrs, computeStudyStats, escapeHTML, parseCSV, shuffle, toCSV, uid } from "./core.js";
+import { buildMixedPlan, calculateSrs, computeStudyStats, escapeHTML, parseCSV, pickMixedVariant, shuffle, toCSV, uid } from "./core.js";
 import * as coreModule from "./core.js";
 import { deleteDeckCascade, getSnapshot, put, remove, replaceAll, resetDatabase, saveActivity, seedDatabase } from "./db.js";
 import {
@@ -31,6 +31,8 @@ let vocabSearch = "";
 let listenRate = 1;
 let activeSpecialGame = null;
 let activeSpecialStartedAt = 0;
+let activeSpecialLayer = null;
+let activeSpecialReturnHash = "#study";
 try {
   const storedRate = Number(localStorage.getItem("luyen-tu-listen-rate"));
   if (storedRate === 0.7 || storedRate === 1) listenRate = storedRate;
@@ -376,15 +378,68 @@ function onHubFilterChange(target) {
 }
 
 /* ---------- Phiên học dùng chung ---------- */
-const stageEl = () => document.querySelector("#study-stage");
+const stageEl = () => document.querySelector("#immersive-study-stage") || document.querySelector("#study-stage");
+
+function setSiteShellInert(inert) {
+  for (const selector of ["#app-shell", ".bottom-nav"]) {
+    const el = document.querySelector(selector);
+    if (!el) continue;
+    el.inert = Boolean(inert);
+    if (inert) el.setAttribute("aria-hidden", "true");
+    else el.removeAttribute("aria-hidden");
+  }
+}
 
 function stopSpecialGame() {
-  document.body.classList.remove("rice-shop-immersive");
   if (activeSpecialGame === "bird") unmountDiligentBird();
   else if (activeSpecialGame === "rice_shop") unmountRiceShop();
   else if (activeSpecialGame === "translate" || activeSpecialGame === "sentence") unmountLearningGames();
+  activeSpecialLayer?.remove();
+  document.querySelector("#immersive-game-layer")?.remove();
+  activeSpecialLayer = null;
+  document.body.classList.remove("rice-shop-immersive", "special-game-immersive");
+  setSiteShellInert(false);
   activeSpecialGame = null;
   activeSpecialStartedAt = 0;
+}
+
+function immersiveGameShell(title, gameId, { studyStage = false } = {}) {
+  document.querySelector("#immersive-game-layer")?.remove();
+  const layer = document.createElement("section");
+  layer.id = "immersive-game-layer";
+  layer.className = `immersive-game-layer game-${gameId}`;
+  layer.dataset.game = gameId;
+  layer.setAttribute("role", "application");
+  layer.setAttribute("aria-label", title);
+  const rootId = studyStage ? "immersive-study-stage" : "immersive-game-root";
+  const rootClass = studyStage ? "immersive-game-root immersive-study-stage" : "immersive-game-root";
+  layer.innerHTML = `<button class="immersive-game-exit" type="button" data-action="exit-special-game" aria-label="Thoát trò chơi">✕ <span>Thoát</span></button>
+    <div id="${rootId}" class="${rootClass}"></div>`;
+  document.body.appendChild(layer);
+  activeSpecialLayer = layer;
+  document.body.classList.add("special-game-immersive");
+  document.body.classList.toggle("rice-shop-immersive", gameId === "rice_shop");
+  setSiteShellInert(true);
+  layer.focus?.();
+  return layer.querySelector(`#${rootId}`);
+}
+
+function rescueModeSelectHTML() {
+  return `<section class="immersive-mode-select rescue-mode-select">
+    <div class="immersive-mode-card">
+      <p class="eyebrow">Giải cứu khỉ</p>
+      <h2>Chọn cách chơi</h2>
+      <p>Trả lời đúng để Milo ném bom đẩy Yeti lùi lại.</p>
+      <div class="immersive-mode-grid">
+        <button class="immersive-mode-option rescue-choice quiz" type="button" data-action="start-rescue-special" data-mode="quiz">
+          <strong>Trắc nghiệm</strong><small>Chọn nghĩa đúng · Yeti gây áp lực nhanh hơn.</small>
+        </button>
+        <button class="immersive-mode-option rescue-choice typing" type="button" data-action="start-rescue-special" data-mode="typing">
+          <strong>Gõ từ</strong><small>Nhìn nghĩa và gõ từ tiếng Anh.</small>
+        </button>
+      </div>
+    </div>
+  </section>`;
 }
 
 async function recordSpecialResult(gameId, summary = {}) {
@@ -425,31 +480,31 @@ function specialStageShell(title) {
 async function launchSpecialGame(gameId) {
   closeSpecialHub();
   stopSpecialGame();
-  if (!stageEl()) {
-    location.hash = `#study?special=${encodeURIComponent(gameId)}`;
-    return;
-  }
   const cards = hubCards();
-  if (gameId === "mixed") return startMode("mixed");
-  if (gameId === "rescue_monkey") {
-    if (cards.length < 4) return toast("Cần ít nhất 4 từ theo bộ lọc để chơi Giải cứu khỉ.", "warn");
-    return openModal(`<h2 id="modal-title">Giải cứu khỉ · Chọn cách chơi</h2>
-      <p>Trả lời đúng để Milo ném bom đẩy Yeti lùi lại.</p>
-      <div class="grid grid-2">
-        <button class="card special-choice rescue-choice quiz" type="button" data-action="start-rescue-special" data-mode="quiz"><strong>Trắc nghiệm</strong><small>Chọn nghĩa đúng · Yeti gây áp lực nhanh hơn.</small></button>
-        <button class="card special-choice rescue-choice typing" type="button" data-action="start-rescue-special" data-mode="typing"><strong>Gõ từ</strong><small>Nhìn nghĩa và gõ từ tiếng Anh.</small></button>
-      </div>
-      <div class="actions"><button class="btn" type="button" data-action="close-modal">Hủy</button></div>`);
-  }
+
+  if (gameId === "rescue_monkey" && cards.length < 4) return toast("Cần ít nhất 4 từ theo bộ lọc để chơi Giải cứu khỉ.", "warn");
   if (gameId === "bird" && cards.length < 4) return toast("Cần ít nhất 4 từ theo bộ lọc để chơi Chim Chăm Chỉ.", "warn");
   if (gameId === "rice_shop" && cards.length < 2) return toast("Cần ít nhất 2 từ theo bộ lọc để mở Quán cơm tấm.", "warn");
-  const root = specialStageShell(modeName(gameId));
+  if (!cards.length) return toast("Không có từ nào khớp bộ lọc hiện tại.", "warn");
+
+  activeSpecialReturnHash = location.hash && !location.hash.includes("special=") ? location.hash : "#study";
+  const usesStudyEngine = gameId === "rescue_monkey" || gameId === "mixed";
+  const root = immersiveGameShell(modeName(gameId), gameId, { studyStage: usesStudyEngine });
   if (!root) return;
-  root.closest(".special-stage-shell")?.classList.toggle("is-rice-shop", gameId === "rice_shop");
-  document.body.classList.toggle("rice-shop-immersive", gameId === "rice_shop");
+
   activeSpecialGame = gameId;
   activeSpecialStartedAt = Date.now();
   const finish = (summary) => { recordSpecialResult(gameId, summary).catch(console.error); };
+
+  if (gameId === "rescue_monkey") {
+    root.innerHTML = rescueModeSelectHTML();
+    return;
+  }
+  if (gameId === "mixed") {
+    startMode("mixed");
+    if (studySession) studySession.specialMode = "mixed";
+    return;
+  }
   if (gameId === "bird") {
     mountDiligentBird(root, { cards, limit: Math.min(cards.length, 20), onFinish: finish });
     startDiligentBird();
@@ -512,6 +567,19 @@ async function markWrong(card) {
   await put("cards", card);
 }
 
+function queueMixedRetry(card) {
+  const s = studySession;
+  if (!s || s.mode !== "mixed" || s.retryQueued || !card) return false;
+  const previous = s.plan?.[s.plan.length - 1] || null;
+  const variant = pickMixedVariant(previous);
+  s.cards.push(card);
+  s.plan.push(variant);
+  s.total = s.cards.length;
+  s.retryQueued = true;
+  refreshChrome();
+  return true;
+}
+
 /* ---------- Rescue Monkey arena ---------- */
 const RM_START = 15;
 const rmVariant = () => (studySession?.mode === "mixed" ? studySession.plan?.[studySession.index] : studySession?.mode);
@@ -557,11 +625,10 @@ function startMode(mode, { srs = false, quiet = false } = {}) {
     cards: pool, index: 0, total: pool.length, correct: 0, wrong: 0, combo: 0, xp: 0, coins: 0,
     startedAt: nowISO(), playing: true, revealed: false, picked: null, feedback: "",
     options: null, matched: [], matchTerms: null, matchMeanings: null, matchCards: null, selectedTerm: null, plan: null,
-    distance: RM_START, animating: false,
+    retryQueued: false, distance: RM_START, animating: false,
   };
   if (meta.id === "mixed") {
-    const variants = ["quiz", "typing", "listening", "match", "flashcard"];
-    session.plan = shuffle(pool.map((_, i) => variants[i % variants.length]));
+    session.plan = buildMixedPlan(pool.length);
   }
   setSession(session);
   renderCurrentCard();
@@ -579,6 +646,7 @@ function nextCard() {
   s.matchMeanings = null;
   s.matchCards = null;
   s.selectedTerm = null;
+  s.retryQueued = false;
   rmClear();
   s.animating = false;
   s.index += 1;
@@ -625,6 +693,7 @@ async function rateCard(rating) {
     s.wrong += 1;
     s.combo = 0;
     s.xp += AGAIN_XP;
+    queueMixedRetry(card);
   } else {
     s.correct += 1;
     s.combo += 1;
@@ -672,6 +741,7 @@ async function pickOption(index) {
   else {
     award(false);
     await markWrong(card);
+    queueMixedRetry(card);
   }
   renderCurrentCard();
   rmPlay(isCorrect, () => { if (studySession) renderCurrentCard(); });
@@ -729,6 +799,7 @@ async function pickMatch(column, id) {
     s.selectedTerm = null;
     award(false);
     await markWrong(card);
+    queueMixedRetry(card);
   }
   renderMatch();
 }
@@ -736,7 +807,7 @@ async function pickMatch(column, id) {
 function advanceMatch() {
   const s = studySession;
   if (!s) return;
-  s.index += (s.matchCards || []).length - 1;
+  if (s.mode !== "mixed") s.index += (s.matchCards || []).length - 1;
   nextCard();
 }
 
@@ -772,10 +843,15 @@ async function checkTyping(answer) {
   } else {
     award(false);
     await markWrong(card);
+    queueMixedRetry(card);
     s.feedback = `Chưa đúng. Gợi ý: bắt đầu bằng "${firstLetterHint(card)}", đáp án là "${card.term}".`;
     s.animating = true;
     renderTyping();
-    rmPlay(false, () => { if (studySession) renderTyping(); });
+    rmPlay(false, () => {
+      if (!studySession) return;
+      if (studySession.mode === "mixed") nextCard();
+      else renderTyping();
+    });
   }
 }
 
@@ -815,8 +891,12 @@ async function checkListening(answer) {
   } else {
     award(false);
     await markWrong(card);
+    queueMixedRetry(card);
     s.feedback = `Chưa đúng. Đáp án: "${card.term}".`;
-    renderListening();
+    if (s.mode === "mixed") {
+      toast(s.feedback, "warn");
+      nextCard();
+    } else renderListening();
   }
 }
 
@@ -835,16 +915,18 @@ async function finishSession() {
     type: "study", mode: activityMode, deckId: s.deckId, deckName: s.deckName,
     total, correct, wrong, accuracy, duration, startedAt: s.startedAt,
     xp: s.xp, coins: s.coins, sessionXp: s.xp, sessionCoins: s.coins,
-    detail: `${modeName(activityMode)}${s.specialMode ? ` · ${modeName(s.mode)}` : ""}${s.srs ? " · SRS" : ""} ${correct}/${total}`,
+    detail: `${modeName(activityMode)}${s.specialMode && s.mode !== activityMode ? ` · ${modeName(s.mode)}` : ""}${s.srs ? " · SRS" : ""} ${correct}/${total}`,
   });
   await reload(false);
   setSession({ ...s, playing: false });
   if (stageEl()) {
     stageEl().innerHTML = `<article class="card study-card result-card">
     <p class="eyebrow">Kết quả phiên học</p>
-    <h2>${escapeHTML(modeName(activityMode))}${s.specialMode ? ` · ${escapeHTML(modeName(s.mode))}` : ""} · ${correct}/${total} đúng (${accuracy}%)</h2>
+    <h2>${escapeHTML(modeName(activityMode))}${s.specialMode && s.mode !== activityMode ? ` · ${escapeHTML(modeName(s.mode))}` : ""} · ${correct}/${total} đúng (${accuracy}%)</h2>
     <p>Bộ ${escapeHTML(s.deckName)} · ${escapeHTML(fmtDuration(duration))} · +${s.xp} XP · +${s.coins} coin.</p>
-    <div class="actions"><a class="btn btn-primary" href="#study">Học tiếp</a><a class="btn" href="#stats">Xem thống kê</a></div></article>`;
+    <div class="actions">${s.specialMode
+      ? `<button class="btn btn-primary" type="button" data-action="restart-special-session" data-game="${escapeHTML(activityMode)}" data-mode="${escapeHTML(s.mode)}">↻ Chơi lại</button><button class="btn" type="button" data-action="exit-special-game">Thoát về trung tâm</button>`
+      : `<a class="btn btn-primary" href="#study">Học tiếp</a><a class="btn" href="#stats">Xem thống kê</a>`}</div></article>`;
   }
   activeSpecialGame = null;
   activeSpecialStartedAt = 0;
@@ -1030,10 +1112,27 @@ async function handleAction(action, target) {
     return;
   }
   if (action === "open-special-hub") return openSpecialGames();
+  if (action === "restart-special-session") {
+    if (!activeSpecialLayer || !document.querySelector("#immersive-study-stage")) return;
+    const game = target.dataset.game;
+    const mode = target.dataset.mode;
+    activeSpecialGame = game;
+    activeSpecialStartedAt = Date.now();
+    if (game === "rescue_monkey") {
+      startMode(mode === "typing" ? "typing" : "quiz");
+      if (studySession) studySession.specialMode = "rescue_monkey";
+    } else if (game === "mixed") {
+      startMode("mixed");
+      if (studySession) studySession.specialMode = "mixed";
+    }
+    return;
+  }
   if (action === "start-rescue-special") {
     closeModal();
-    stopSpecialGame();
     const mode = target.dataset.mode === "typing" ? "typing" : "quiz";
+    const immersiveStage = document.querySelector("#immersive-study-stage");
+    if (!immersiveStage) return;
+    immersiveStage.innerHTML = "";
     startMode(mode);
     if (studySession) {
       studySession.specialMode = "rescue_monkey";
@@ -1043,10 +1142,18 @@ async function handleAction(action, target) {
     return;
   }
   if (action === "exit-special-game") {
+    const wasImmersive = Boolean(activeSpecialLayer);
+    const returnHash = activeSpecialReturnHash || "#study";
     stopSpecialGame();
     rmClear();
     if (studySession?.specialMode) setSession(null);
-    renderStudyEntry(new URLSearchParams());
+    if (wasImmersive) {
+      history.replaceState(null, "", returnHash);
+      renderRoute();
+      openSpecialGames();
+    } else {
+      renderStudyEntry(new URLSearchParams());
+    }
     return;
   }
   if (action === "start-game") return startMode(target.dataset.mode || "flashcard");
@@ -1069,8 +1176,9 @@ async function handleAction(action, target) {
     const card = s.cards[s.index];
     award(false);
     await markWrong(card);
-    s.feedback = `Đã bỏ qua. Đáp án: "${card.term}".`;
-    return s.mode === "listening" || (s.mode === "mixed" && s.plan?.[s.index] === "listening") ? renderListening() : renderTyping();
+    queueMixedRetry(card);
+    toast(`Đã bỏ qua. Đáp án: "${card.term}".`, "warn");
+    return nextCard();
   }
   if (action === "end-session") return finishSession();
 }
@@ -1192,6 +1300,12 @@ document.addEventListener("input", (event) => {
 });
 
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && activeSpecialLayer) {
+    event.preventDefault();
+    const exitButton = document.querySelector(".immersive-game-exit");
+    handleAction("exit-special-game", exitButton).catch(console.error);
+    return;
+  }
   if (event.key === "Escape" && !modal.hidden) closeModal();
 });
 

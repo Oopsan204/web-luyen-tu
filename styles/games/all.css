@@ -63,3 +63,249 @@ body.rice-shop-immersive .main-column { grid-column:1 !important; }
 body.rice-shop-immersive .view { max-width:none !important; padding:10px 12px 24px !important; }
 body.rice-shop-immersive .special-stage-shell.is-rice-shop { max-width:1320px; margin:0 auto; }
 body.rice-shop-immersive .special-stage-toolbar { max-width:1320px; margin:0 auto 10px; }
+
+/* True fullscreen surface for Quán Cơm Tấm */
+body.rice-shop-immersive {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  background: #5d3726;
+}
+body.rice-shop-immersive #app-shell,
+body.rice-shop-immersive > .bottom-nav {
+  display: none !important;
+}
+.immersive-game-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100vh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: #5d3726;
+  isolation: isolate;
+}
+.immersive-game-root {
+  width: 100%;
+  min-height: 100%;
+}
+.immersive-game-layer .rs-root {
+  width: 100%;
+  max-width: none;
+  min-height: 100dvh;
+  margin: 0;
+}
+.immersive-game-layer .rs-tutorial-scene,
+.immersive-game-layer .rs-prep-scene,
+.immersive-game-layer .rs-game-scene,
+.immersive-game-layer .rs-report {
+  min-height: 100dvh;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.immersive-game-exit {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 5200;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 9px 13px;
+  border: 1px solid rgba(92,55,35,.25);
+  border-radius: 12px;
+  background: rgba(255,250,241,.94);
+  color: #4c3427;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(48,27,17,.18);
+  backdrop-filter: blur(8px);
+}
+.immersive-game-exit:hover {
+  transform: translateY(-1px);
+}
+@media (max-width: 640px) {
+  .immersive-game-exit {
+    min-height: 40px;
+    padding: 8px 10px;
+  }
+  .immersive-game-exit span {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .immersive-game-exit { transition: none; }
+}
+
+/* Shared fullscreen behavior for every special game */
+body.special-game-immersive {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+body.special-game-immersive #app-shell,
+body.special-game-immersive > .bottom-nav {
+  display: none !important;
+}
+.immersive-game-layer {
+  --game-safe-top: max(14px, env(safe-area-inset-top));
+  --game-safe-right: max(14px, env(safe-area-inset-right));
+  --game-safe-bottom: max(14px, env(safe-area-inset-bottom));
+  --game-safe-left: max(14px, env(safe-area-inset-left));
+}
+.immersive-game-root,
+.immersive-study-stage {
+  width: 100%;
+  min-height: 100dvh;
+}
+.immersive-game-layer.game-bird {
+  background: linear-gradient(#7fd0f2, #eaf9ff);
+}
+.immersive-game-layer.game-bird .immersive-game-root {
+  height: 100dvh;
+  overflow: hidden;
+}
+.immersive-game-layer.game-bird .dbird {
+  width: 100%;
+  height: 100dvh;
+  min-height: 100dvh;
+  aspect-ratio: auto;
+  border-radius: 0;
+  box-shadow: none;
+}
+.immersive-game-layer.game-translate,
+.immersive-game-layer.game-sentence {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255,255,255,.9), transparent 26%),
+    linear-gradient(145deg, #eee9ff 0%, #f8f5ff 46%, #e8f5ff 100%);
+}
+.immersive-game-layer.game-translate .immersive-game-root,
+.immersive-game-layer.game-sentence .immersive-game-root {
+  display: grid;
+  place-items: center;
+  padding: max(64px, calc(var(--game-safe-top) + 46px)) clamp(18px, 5vw, 72px) var(--game-safe-bottom);
+}
+.immersive-game-layer.game-translate .lg-stage,
+.immersive-game-layer.game-sentence .lg-stage {
+  width: min(980px, 100%);
+  max-width: none;
+  margin: 0;
+}
+.immersive-game-layer.game-translate .lg-panel,
+.immersive-game-layer.game-sentence .lg-panel {
+  min-height: min(58vh, 520px);
+  display: grid;
+  align-content: center;
+  padding: clamp(24px, 4vw, 54px);
+  border-radius: 26px;
+  box-shadow: 0 26px 70px rgba(68,55,118,.16);
+}
+.immersive-game-layer.game-rescue_monkey {
+  background:
+    radial-gradient(circle at 50% 5%, rgba(255,255,255,.96), transparent 34%),
+    linear-gradient(180deg, #dbeeff 0%, #edf7ff 48%, #cbddef 100%);
+}
+.immersive-game-layer.game-mixed {
+  background:
+    radial-gradient(circle at 15% 10%, rgba(255,255,255,.85), transparent 28%),
+    linear-gradient(145deg, #f4efff, #eef7ff 55%, #fff7e9);
+}
+.immersive-study-stage {
+  padding: max(66px, calc(var(--game-safe-top) + 50px)) clamp(18px, 5vw, 72px) var(--game-safe-bottom);
+  overflow: auto;
+}
+.game-rescue_monkey .immersive-study-stage,
+.game-mixed .immersive-study-stage {
+  display: grid;
+  align-content: center;
+  gap: 14px;
+}
+.game-rescue_monkey .session-bar,
+.game-mixed .session-bar {
+  width: min(1040px, 100%);
+  margin: 0 auto 14px;
+}
+.game-rescue_monkey .study-card,
+.game-mixed .study-card,
+.game-rescue_monkey .result-card,
+.game-mixed .result-card {
+  width: min(900px, 100%);
+  max-width: none;
+}
+.game-rescue_monkey .rm-arena {
+  width: min(1040px, 100%);
+  height: clamp(260px, 42vh, 420px);
+  margin: 0 auto 16px;
+  border-radius: 24px;
+  box-shadow: 0 18px 50px rgba(39,71,110,.13);
+}
+.immersive-mode-select {
+  min-height: calc(100dvh - 90px);
+  display: grid;
+  place-items: center;
+}
+.immersive-mode-card {
+  width: min(760px, 100%);
+  padding: clamp(24px, 5vw, 52px);
+  border-radius: 28px;
+  background: rgba(255,255,255,.94);
+  border: 1px solid rgba(85,118,155,.2);
+  box-shadow: 0 28px 80px rgba(42,72,108,.18);
+  text-align: center;
+}
+.immersive-mode-card h2 {
+  margin: 6px 0 8px;
+  font-size: clamp(30px, 5vw, 52px);
+}
+.immersive-mode-card > p:not(.eyebrow) {
+  margin: 0 auto 24px;
+  color: #58708e;
+}
+.immersive-mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.immersive-mode-option {
+  min-height: 150px;
+  padding: 24px;
+  border: 1px solid #cddceb;
+  border-radius: 22px;
+  background: linear-gradient(180deg,#fff,#f5f9fd);
+  color: #263f5e;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(52,83,118,.08);
+}
+.immersive-mode-option strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 21px;
+}
+.immersive-mode-option small {
+  display: block;
+  color: #60758e;
+  line-height: 1.5;
+}
+.immersive-mode-option:hover {
+  transform: translateY(-2px);
+  border-color: #78a9dc;
+}
+@media (max-width: 640px) {
+  .immersive-game-layer.game-translate .immersive-game-root,
+  .immersive-game-layer.game-sentence .immersive-game-root,
+  .immersive-study-stage {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .immersive-mode-grid { grid-template-columns: 1fr; }
+  .immersive-mode-option { min-height: 112px; }
+  .game-rescue_monkey .rm-arena { height: 220px; border-radius: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .immersive-mode-option { transition: none; }
+}

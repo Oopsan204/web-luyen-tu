@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calculateSrs, parseCSV, toCSV, computeStudyStats, filterStudyCards } from "../js/core.js";
+import { buildMixedPlan, calculateSrs, parseCSV, pickMixedVariant, toCSV, computeStudyStats, filterStudyCards } from "../js/core.js";
 
 const now = new Date("2026-10-16T08:00:00.000Z");
 const base = { interval: 0, repetitions: 0, ease: 2.5, level: "new" };
@@ -111,4 +111,23 @@ test("random deterministic với random inject và không mutate input", () => {
   assert.deepEqual(ids(first), ids(second));
   assert.equal(JSON.stringify(studyCards), before);
   assert.notEqual(first, studyCards);
+});
+
+test("Mixed plan 20 câu giữ tỷ lệ 30/30/20/10/10 và không lặp mode liền nhau", () => {
+  let seed = 17;
+  const random = () => {
+    seed = (seed * 48271) % 2147483647;
+    return seed / 2147483647;
+  };
+  const plan = buildMixedPlan(20, random);
+  assert.equal(plan.length, 20);
+  const counts = plan.reduce((acc, mode) => ({ ...acc, [mode]: (acc[mode] || 0) + 1 }), {});
+  assert.deepEqual(counts, { quiz: 6, typing: 6, listening: 4, flashcard: 2, match: 2 });
+  for (let i = 1; i < plan.length; i += 1) assert.notEqual(plan[i], plan[i - 1]);
+});
+
+test("Mixed retry chọn mode hợp lệ và tránh lặp mode cuối", () => {
+  const mode = pickMixedVariant("quiz", () => 0);
+  assert.notEqual(mode, "quiz");
+  assert.ok(["typing", "listening", "flashcard", "match"].includes(mode));
 });

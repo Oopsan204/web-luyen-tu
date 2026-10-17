@@ -6,6 +6,8 @@
   "description": "Website luyện từ vựng offline-first bằng HTML, CSS và JavaScript thuần",
   "scripts": {
     "start": "node server.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "test:games:e2e": "node scripts/game-browser-e2e.mjs",
+    "test:all": "npm test && npm run test:games:e2e"
   }
 }

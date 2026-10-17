@@ -69,3 +69,20 @@ Ghi chú IndexedDB: tab đang mở tự đóng kết nối khi có tab khác nâ
 
 Khuyến nghị Chrome/Edge/Firefox/Safari bản mới. Chế độ Nghe viết cần Web Speech Synthesis; ứng dụng sẽ thông báo nếu trình duyệt không hỗ trợ.
 # web-luyen-tu
+
+
+### Browser E2E cho Special Games
+
+Cần Orca runtime đang hoạt động trên máy. Gate dùng browser profile cô lập nên không chạm vào IndexedDB/profile học thật.
+
+```bash
+npm run test:games:e2e
+```
+
+Lệnh trên kiểm tra 6 Special Games ở desktop và iPhone 12 (390×844): fullscreen layer, ẩn/khóa website shell, thao tác gameplay cơ bản, không tràn ngang, nút thoát và khôi phục Special Game Hub.
+
+Chạy toàn bộ unit/integration + browser E2E:
+
+```bash
+npm run test:all
+```

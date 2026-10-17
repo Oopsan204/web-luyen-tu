@@ -264,6 +264,9 @@ function resolveQuestion(ok, revealHTML) {
   const q = s.qstate;
   q.locked = true;
   q.ok = ok;
+  s.container.querySelectorAll("[data-lg], [data-lg-form] input, [data-lg-form] button").forEach((control) => {
+    if ("disabled" in control) control.disabled = true;
+  });
   const points = scoreForResult({ ok, hintsUsed: q.hints, attempts: q.attempts });
   if (ok) {
     s.correct += 1;
