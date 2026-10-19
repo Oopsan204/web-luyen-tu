@@ -64,6 +64,9 @@ test("lịch câu hỏi: tối đa 3 câu/ngày, đúng pha, đúng khách đầ
   // Pha khác không hỏi
   assert.equal(pahNextQuiz({ phase: "close", day: 1 }, false, null), null);
   assert.equal(pahNextQuiz({ phase: "sell", day: 1 }, false, null), null);
+  // Chống crash với input null/undefined
+  assert.equal(pahNextQuiz(null, false, null), null);
+  assert.equal(pahNextQuiz(undefined, false, null), null);
   // Thứ tự ưu tiên: market trước cook
   assert.equal(pahNextQuiz({ phase: "morning", day: 1 }, true, { day: 1, market: false, cook: false, customer: false }), "market");
 });

@@ -98,11 +98,12 @@ export function checkVocabAnswer(challenge, answer) {
  * Trả về "market" | "cook" | "customer" | null. Tối đa 3 câu/ngày.
  */
 export function pahNextQuiz(game = {}, firstCustomer = false, asked = null) {
-  const day = Math.max(1, Math.floor(Number(game.day) || 1));
+  const g = game || {};
+  const day = Math.max(1, Math.floor(Number(g.day) || 1));
   const a = asked && asked.day === day
     ? asked
     : { day, market: false, cook: false, customer: false };
-  const phase = String(game.phase || "");
+  const phase = String(g.phase || "");
   if (!a.market && phase === "morning") return "market";
   if (!a.cook && phase === "prep") return "cook";
   if (!a.customer && firstCustomer) return "customer";

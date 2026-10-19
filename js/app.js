@@ -1230,15 +1230,15 @@ async function importText(text) {
   }
   const rows = parseCSV(trimmed);
   const cards = [];
+  let fallbackDeckId = importTargetDeck;
   for (const row of rows) {
-    const deckId = row.deckId || importTargetDeck;
+    let deckId = row.deckId || fallbackDeckId;
     if (!deckId) {
-      const id = uid("deck");
-      await put("decks", { id, name: "Bộ import", description: "Từ CSV", icon: "📚", createdAt: nowISO() });
-      cards.push(freshCard(row, id));
-    } else {
-      cards.push(freshCard(row, deckId));
+      deckId = uid("deck");
+      await put("decks", { id: deckId, name: "Bộ import", description: "Từ CSV", icon: "📚", createdAt: nowISO() });
+      fallbackDeckId = deckId;
     }
+    cards.push(freshCard(row, deckId));
   }
   for (const card of cards) await put("cards", card);
   await reload();
