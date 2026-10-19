@@ -85,14 +85,12 @@ Mỗi module export mount + unmount + start:
 4. Stationery (`pencil/notebook_closed/speech_hello_vi.png`) hiển thị đúng vai trò.
 5. Thoát giữa chừng không mất tiến độ đã lưu của session.
 
-### 4.6 Phở Anh Hai
+### 4.6 Phở Anh Hai (wrapper bản gốc, từ 2026-10-19)
 
-1. Intro hiện xe phở pixel (canvas procedural), bấm `MỞ XE PHỞ` sang chợ ngày 1.
-2. Chợ: giá dao động theo ngày, trả lời câu đố từ vựng đúng để giảm 20%; combo gợi ý mua đủ xương/gia vị + nguyên liệu cho 4 khách.
-3. Ninh nước dùng: đúng → chất lượng 100%, sai → 55%; nồi tiêu hao 1 xương + 1 gia vị.
-4. Phục vụ: mỗi khách một câu Anh ↔ Việt, đúng cộng kiên nhẫn + tip + uy tín, sai trừ kiên nhẫn và không có tip.
-5. Hết 4 khách: bảng tất toán doanh thu/tip/chi phí/lợi nhuận/sao/XP; `Ngày mai` sang ngày mới, `Thoát` trả về Special Hub.
-6. Đóng giữa ngày: không còn interval patience/simmer, rAF vẽ canvas, listener click hay AudioContext.
+1. Module là wrapper iframe nhúng nguyên vẹn `standalone/pho-anh-hai/index.html` (không sửa file gốc); `mountPhoAnhHai`/`startPhoAnhHai`/`unmountPhoAnhHai` giữ nguyên hợp đồng API. Gỡ iframe là dọn sạch timer/rAF/listener/audio.
+2. Tối đa 3 câu hỏi từ vựng/ngày dạng overlay: Q1 khi vào pha morning (đúng → giảm 20% giá chợ `s.market.p`), Q2 khi vào pha prep (đúng → buff `pot.ql` khi `cookStart`), Q3 khi khách đầu tiên vào (sự kiện `custIn`; đúng → `customer.max` +40%, uy tín +2).
+3. Khách 2+ không có câu hỏi, không cộng đúng/sai vào thống kê. Không chồng câu hỏi lên modal của game (hoãn khi `#modal` đang mở). Không có dữ liệu từ vựng → bỏ qua hết.
+4. Thoát game: `onFinish` báo `{correct, wrong, xp, coins}` để cộng XP/coin hồ sơ học tập.
 
 
 ## 5. Asset Matrix (đã kiểm trên đĩa)
