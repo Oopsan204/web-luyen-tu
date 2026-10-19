@@ -1,6 +1,6 @@
 # QA Special Games — Audit, Smoke Checklist, Asset Matrix
 
-Phạm vi: Rescue Monkey, Chim Chăm Chỉ, Quán Cơm Tấm, Dịch Câu, Đặt Câu, Special Hub.
+Phạm vi: Rescue Monkey, Chim Chăm Chỉ, Quán Cơm Tấm, Phở Anh Hai, Dịch Câu, Đặt Câu, Special Hub.
 Trạng thái tại thời điểm audit: `js/games/*.js` chưa tồn tại (sibling đang làm). Asset PNG đủ trên đĩa.
 Audit source: `tests/special-games-audit.test.mjs`.
 
@@ -13,6 +13,7 @@ Mỗi module export mount + unmount + start:
 | rescue-monkey | mountRescueMonkey | unmountRescueMonkey | startRescueMonkey |
 | diligent-bird | mountDiligentBird | unmountDiligentBird | startDiligentBird |
 | rice-shop | mountRiceShop | unmountRiceShop | startRiceShop |
+| pho-anh-hai | mountPhoAnhHai | unmountPhoAnhHai | startPhoAnhHai |
 | learning-games | mountLearningGames | unmountLearningGames | startLearningGames |
 | special-hub | mountSpecialHub | unmountSpecialHub | openSpecialHub |
 
@@ -84,6 +85,16 @@ Mỗi module export mount + unmount + start:
 4. Stationery (`pencil/notebook_closed/speech_hello_vi.png`) hiển thị đúng vai trò.
 5. Thoát giữa chừng không mất tiến độ đã lưu của session.
 
+### 4.6 Phở Anh Hai
+
+1. Intro hiện xe phở pixel (canvas procedural), bấm `MỞ XE PHỞ` sang chợ ngày 1.
+2. Chợ: giá dao động theo ngày, trả lời câu đố từ vựng đúng để giảm 20%; combo gợi ý mua đủ xương/gia vị + nguyên liệu cho 4 khách.
+3. Ninh nước dùng: đúng → chất lượng 100%, sai → 55%; nồi tiêu hao 1 xương + 1 gia vị.
+4. Phục vụ: mỗi khách một câu Anh ↔ Việt, đúng cộng kiên nhẫn + tip + uy tín, sai trừ kiên nhẫn và không có tip.
+5. Hết 4 khách: bảng tất toán doanh thu/tip/chi phí/lợi nhuận/sao/XP; `Ngày mai` sang ngày mới, `Thoát` trả về Special Hub.
+6. Đóng giữa ngày: không còn interval patience/simmer, rAF vẽ canvas, listener click hay AudioContext.
+
+
 ## 5. Asset Matrix (đã kiểm trên đĩa)
 
 ### Special Hub — `assets/games/special-hub/`
@@ -94,6 +105,7 @@ Mỗi module export mount + unmount + start:
 | thumbnails/mixed.png | 685x330, 261.7KB | Card Mixed |
 | thumbnails/rescue_monkey.png | 673x301, 337.4KB | Card Giải cứu khỉ |
 | thumbnails/rice_shop.png | 680x310, 330.6KB | Card Quán cơm tấm |
+| thumbnails/pho_anh_hai.png | 680x310, 67.6KB | Card Phở Anh Hai |
 | thumbnails/sentence.png | 685x310, 260.6KB | Card Đặt câu |
 | thumbnails/translate.png | 667x300, 239.9KB | Card Dịch câu |
 | ui/badge_arcade.png | 265x120, 29.4KB | Badge arcade |

@@ -7,6 +7,7 @@ import {
   mountDiligentBird, startDiligentBird, unmountDiligentBird,
   mountLearningGames, unmountLearningGames,
   mountRiceShop, startRiceShop, unmountRiceShop,
+  mountPhoAnhHai, startPhoAnhHai, unmountPhoAnhHai,
 } from "./games/index.js";
 
 const view = document.querySelector("#view");
@@ -58,7 +59,7 @@ const dueCards = (cards = data.cards, now = new Date()) => cards.filter((c) => !
 const levelLabel = (l) => ({ new: "Mới", learning: "Đang học", mastered: "Đã thuộc" })[l] || "Mới";
 const modeName = (m) => ({
   flashcard: "Flashcard", quiz: "Trắc nghiệm", match: "Nối từ", typing: "Gõ từ", listening: "Nghe viết", mixed: "Luyện tổng hợp",
-  rescue_monkey: "Giải cứu khỉ", bird: "Chim Chăm Chỉ", rice_shop: "Quán cơm tấm", translate: "Dịch câu", sentence: "Luyện đặt câu",
+  rescue_monkey: "Giải cứu khỉ", bird: "Chim Chăm Chỉ", rice_shop: "Quán cơm tấm", pho_anh_hai: "Phở Anh Hai", translate: "Dịch câu", sentence: "Luyện đặt câu",
 })[m] || m;
 const formatDate = (v) => { try { return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(v)); } catch { return ""; } };
 const relativeTime = (v) => {
@@ -414,6 +415,7 @@ function stopSpecialGame() {
   if (activeSpecialGame === "bird") unmountDiligentBird();
   else if (activeSpecialGame === "rice_shop") unmountRiceShop();
   else if (activeSpecialGame === "translate" || activeSpecialGame === "sentence") unmountLearningGames();
+  else if (activeSpecialGame === "pho_anh_hai") unmountPhoAnhHai();
   activeSpecialLayer?.remove();
   document.querySelector("#immersive-game-layer")?.remove();
   activeSpecialLayer = null;
@@ -471,8 +473,9 @@ async function recordSpecialResult(gameId, summary = {}) {
     : summary.satisfaction != null
       ? Math.round((Number(summary.satisfaction) || 0) * 100)
       : total ? Math.round((correct / total) * 100) : 0;
-  const xp = Math.max(0, correct * XP_PER_CORRECT);
-  const coins = gameId === "rice_shop"
+  const xp = Math.max(0, Number(summary.xp) || correct * XP_PER_CORRECT);
+  const shopCoins = gameId === "rice_shop" || gameId === "pho_anh_hai";
+  const coins = shopCoins
     ? Math.max(0, Math.min(50, Math.round((Number(summary.coins) || 0) / 10)))
     : Math.max(0, correct);
   const startedAt = activeSpecialStartedAt ? new Date(activeSpecialStartedAt).toISOString() : nowISO();
@@ -505,6 +508,7 @@ async function launchSpecialGame(gameId) {
   if (gameId === "rescue_monkey" && cards.length < 4) return toast("Cần ít nhất 4 từ theo bộ lọc để chơi Giải cứu khỉ.", "warn");
   if (gameId === "bird" && cards.length < 4) return toast("Cần ít nhất 4 từ theo bộ lọc để chơi Chim Chăm Chỉ.", "warn");
   if (gameId === "rice_shop" && cards.length < 2) return toast("Cần ít nhất 2 từ theo bộ lọc để mở Quán cơm tấm.", "warn");
+  if (gameId === "pho_anh_hai" && cards.length < 2) return toast("Cần ít nhất 2 từ theo bộ lọc để mở Phở Anh Hai.", "warn");
   if (!cards.length) return toast("Không có từ nào khớp bộ lọc hiện tại.", "warn");
 
   activeSpecialReturnHash = location.hash && !location.hash.includes("special=") ? location.hash : "#study";
@@ -530,6 +534,9 @@ async function launchSpecialGame(gameId) {
   } else if (gameId === "rice_shop") {
     mountRiceShop(root, { cards, onFinish: finish });
     startRiceShop();
+  } else if (gameId === "pho_anh_hai") {
+    mountPhoAnhHai(root, { cards, onFinish: finish });
+    startPhoAnhHai();
   } else if (gameId === "translate" || gameId === "sentence") {
     mountLearningGames(root, { mode: gameId, cards, onFinish: finish });
   }
@@ -1331,7 +1338,7 @@ async function handleAction(action, target) {
   if (action === "exit-special-game") {
     const wasImmersive = Boolean(activeSpecialLayer);
     const returnHash = activeSpecialReturnHash || "#study";
-    const specialIds = ["bird", "rice_shop", "translate", "sentence", "rescue_monkey", "mixed"];
+    const specialIds = ["bird", "rice_shop", "pho_anh_hai", "translate", "sentence", "rescue_monkey", "mixed"];
     const wasSpecial = activeSpecialGame && specialIds.includes(activeSpecialGame);
     stopSpecialGame();
     rmClear();

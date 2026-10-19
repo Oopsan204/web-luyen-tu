@@ -31,6 +31,14 @@ export const SPECIAL_GAMES = [
     badgeLabel: "Mới",
   },
   {
+    id: "pho_anh_hai",
+    title: "Phở Anh Hai",
+    desc: "Quản lý xe phở pixel, nấu nước dùng và luyện từ vựng.",
+    thumb: `${SHB_BASE}/thumbnails/pho_anh_hai.png`,
+    badge: `${SHB_BASE}/ui/badge_new.png`,
+    badgeLabel: "Mới",
+  },
+  {
     id: "translate",
     title: "Dịch Câu",
     desc: "Dịch nhanh Anh ↔ Việt ăn điểm combo.",
@@ -94,7 +102,7 @@ function buildOverlay() {
     + `<h2 id="shb-title"><img class="shb-head-icon" src="${escapeHTML(SHB_BASE)}/ui/gamepad_icon.png" alt="" aria-hidden="true" loading="lazy" decoding="async">Trò chơi đặc biệt</h2>`
     + `<button type="button" class="shb-close" data-shb-close aria-label="Đóng">✕</button>`
     + `</div>`
-    + `<p class="shb-sub">6 mini game luyện từ — chọn một thẻ để bắt đầu.</p>`
+    + `<p class="shb-sub">7 mini game luyện từ — chọn một thẻ để bắt đầu.</p>`
     + `<div class="shb-grid">${SPECIAL_GAMES.map(cardHTML).join("")}</div>`
     + `</div>`;
   document.body.appendChild(overlay);
